@@ -1,56 +1,67 @@
 
 
-## Acesso de Contador no layout split-screen + identidade B&W
+## Filtros por coluna estilo Excel + busca com wildcard
 
-Unificar a tela de acesso do contador ao mesmo layout split-screen preto/branco da `/login`, e aplicar a identidade visual minimalista B&W em todo o app.
+Adicionar filtros por coluna na conciliação (igual Excel) e expandir a busca da contagem por múltiplos campos. Implementar suporte a wildcards (`*`) em todos os campos de busca do app.
 
-### 1. `src/routes/contar.tsx` — `EntradaForm` no layout da login
+### 1. Helper de busca com wildcard — `src/lib/search.ts` (novo)
 
-Substituir o card centralizado azul por um split-screen idêntico ao da `/login`:
+Criar função utilitária `matchesQuery(value: string, query: string): boolean` que:
+- Normaliza acentos e caixa.
+- Suporta `*` como coringa (qualquer sequência) e `?` (um caractere).
+- `123*` → `^123.*$` (começa com 123).
+- `*abc` → termina com abc; `*abc*` (ou apenas `abc`) → contém abc.
+- Sem `*` → comportamento atual (contém — preserva retrocompatibilidade).
+- Suporta múltiplos termos separados por espaço (AND).
 
-- Layout `min-h-screen grid md:grid-cols-2 bg-white text-black`.
-- **Painel esquerdo**: mesma `heroImg` (`@/assets/login-hero.png`), `object-cover`, virando faixa `h-40` no mobile.
-- **Painel direito**: header com ícone `Boxes` + label "SGS"; centro com:
-  - Título com `TypewriterText` (extrair para `src/components/TypewriterText.tsx` e reusar nas duas rotas) — texto: `"Acesso de contador."`
-  - Subtítulo: `"Use o ID e a senha fornecidos pelo responsável."`
-  - Form sem `Card`, inputs `h-11 border-neutral-200 focus-visible:ring-black`, labels `text-xs font-medium text-neutral-700`:
-    - **ID do inventário** (mono `text-xs`, placeholder "cole aqui o UUID")
-    - **Senha**
-    - **Seu nome**
-  - Botão primário: `h-11 w-full bg-black text-white hover:bg-neutral-800 rounded-md` → "Entrar e contar".
-  - Divisor "ou" (mesmo estilo da login).
-  - Botão secundário `variant="outline"` com `Link to="/login"` → "Sou administrador".
-  - Rodapé `text-xs text-neutral-400` "© SGS — Gestão de inventários".
-- Remover imports de `Card*`, `KeyRound` (substituir por `Boxes`).
+Usado em todos os pontos de busca (conciliação, contagem, dashboard).
 
-### 2. Extrair `TypewriterText`
+### 2. Filtros por coluna na Conciliação — `src/components/ConciliacaoGrid.tsx`
 
-Mover o componente atualmente inline em `src/routes/login.tsx` para `src/components/TypewriterText.tsx` e importá-lo nas duas rotas — sem mudar comportamento (cursor pulsante, 70ms/char, `aria-label`).
+Adicionar uma **linha de filtro abaixo do header** (estilo Excel) com um botão-funil em cada coluna textual (Material, Texto breve, Centro, Depósito, Lote, Posição, Est. especial, Nº est. especial, Contador):
 
-### 3. Identidade visual B&W em todo o app
+- Componente novo `src/components/ColumnFilter.tsx`:
+  - Ícone `Filter` (lucide) no `<th>`; muda para azul/preto sólido quando ativo.
+  - Ao clicar → `Popover` (shadcn já disponível) com:
+    - `Input` no topo (suporta wildcard `*`, usa `matchesQuery`).
+    - Lista com checkboxes dos valores únicos da coluna **dentro dos itens já filtrados pelas outras colunas** (comportamento Excel).
+    - Botões "Selecionar tudo / Limpar" e "Aplicar".
+  - Estado: `Set<string>` de valores selecionados por coluna.
+- Estado global no grid: `columnFilters: Record<SortKey, Set<string>>`.
+- `filtered` passa a aplicar:
+  1. busca global (com wildcard via `matchesQuery`),
+  2. filtro de status existente,
+  3. filtros por coluna (interseção AND entre colunas, OR entre valores de uma mesma coluna),
+  4. ordenação.
+- Para colunas numéricas (Total SAP, Contagem, Diferença): manter sem filtro de coluna nesta versão (ordenação já cobre).
+- Coluna "Contador" filtra pelo nome do contador mais recente exibido.
+- Indicador visual: header com filtro ativo ganha `bg-accent` e o ícone preenchido.
 
-Trocar a paleta de tokens em `src/styles.css` para escala neutra preto/branco/cinzas, mantendo os tokens semânticos do shadcn (sem mexer em componentes):
+### 3. Busca multi-campo na Contagem — `src/routes/contar.tsx`
 
-- `--background: 0 0% 100%` / `--foreground: 0 0% 4%`
-- `--primary: 0 0% 4%` / `--primary-foreground: 0 0% 100%`
-- `--secondary / --muted / --accent`: cinzas neutros (`0 0% 96%` / `0 0% 45%`)
-- `--border / --input: 0 0% 90%`, `--ring: 0 0% 4%`
-- `--card / --popover`: brancos
-- `--destructive`: manter vermelho funcional (estados de erro precisam contrastar)
-- Manter `--success` e `--warning` em tons neutros escuros (preto/cinza-escuro) — feedback fica via ícones e texto, não cor
-- Variante dark: cores invertidas (background preto, foreground branco, cinzas equivalentes)
-- Sidebar tokens: alinhar à mesma paleta neutra
+Substituir o input único de busca por uma barra com:
+- Um `Input` principal "Buscar" + um seletor de **escopo** (`Select`) com opções: `Tudo`, `Material`, `Depósito`, `Posição`, `Lote`, `Descrição`.
+- O usuário pode digitar `123*` em qualquer escopo.
+- Internamente: aplica `matchesQuery` apenas no(s) campo(s) selecionado(s); `Tudo` mantém o comportamento atual (todos os campos concatenados).
+- Adicionar dica abaixo do campo: `Use * como coringa (ex.: 123* )`.
 
-### 4. Ajustes pontuais nas telas existentes para casar com B&W
+### 4. Padronizar wildcard em todos os campos de busca do app
 
-Sem refazer telas, apenas remover usos hard-coded de azul/cores fortes onde existirem (ex.: `text-primary` continua válido pois agora é preto). Os componentes que dependem dos tokens (`Button`, `Input`, `Card`, `Tabs`, etc.) herdam automaticamente a nova paleta.
+Trocar comparações `.includes()` em buscas pelo helper `matchesQuery`:
+- `src/routes/dashboard.tsx` (busca de inventários).
+- `src/components/ConciliacaoGrid.tsx` (busca global do grid).
+- `src/routes/contar.tsx` (busca de itens).
+- Qualquer outro `Input` com `Search` icon que filtre lista localmente.
 
-- `ContagemTela` (header e tabs): cores baseadas em tokens já refletem B&W. Os indicadores `text-success`, `text-warning`, `text-destructive` passam a ser tons neutros (success/warning) + vermelho (destructive) — mantém legibilidade sem azul.
-- Estados "OK" / "Recontagem" continuam diferenciados por borda + ícone.
+Adicionar placeholder consistente: `"Buscar (use * como coringa)…"` nos campos principais.
+
+### 5. Sem mudanças em backend / banco
+
+Tudo é filtragem client-side sobre dados já carregados. Sem migrações, sem alteração de RLS, sem nova edge function.
 
 ### Resultado
 
-- `/contar` (sem sessão): mesmo split-screen B&W da `/login`, com typewriter e botão "Sou administrador" voltando à `/login`.
-- `/contar` (com sessão): tela de contagem mantida, agora monocromática.
-- Resto do app (dashboard, inventários, conciliação): identidade B&W minimalista via tokens.
+- **Conciliação**: cada coluna textual tem um funil clicável → popup com busca + checkboxes dos valores únicos, igual Excel. Filtros combinam entre si.
+- **Contagem**: usuário escolhe filtrar por Material / Depósito / Posição / Lote / Descrição / Tudo, com wildcard.
+- **Em todo app**: digitar `123*` filtra "começa com 123"; `*XYZ` filtra "termina com XYZ"; `ABC` (sem `*`) continua sendo "contém ABC".
 
