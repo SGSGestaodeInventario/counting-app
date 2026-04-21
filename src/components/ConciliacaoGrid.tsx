@@ -230,8 +230,8 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
               </>}
               <td className="num">{fmtNum(totals.sap)}</td>
               <td className="num">{fmtNum(totals.contagem)}</td>
-              <td></td>
               <td className={`num ${Math.abs(totals.dif) > 0.0001 ? "text-destructive" : "text-success"}`}>{fmtNum(totals.dif)}</td>
+              <td></td>
               <td></td>
             </tr>
             {/* HEADER DE COLUNAS */}
