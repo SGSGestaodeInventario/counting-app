@@ -324,30 +324,55 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
         <FilterTab active={filterMode === "ok"} onClick={() => setFilterMode("ok")} label="OK" count={stats.ok} cls="text-success" />
       </div>
 
-      {/* BUSCA + ORDENAÇÃO */}
-      <div className="flex gap-2 mb-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…" className="pl-8 h-9" />
+      {/* BUSCA + ESCOPO + ORDENAÇÃO */}
+      <div className="space-y-1 mb-3">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar (use * como coringa)…"
+              className="pl-8 h-9"
+            />
+          </div>
+          <select
+            value={searchScope}
+            onChange={(e) => setSearchScope(e.target.value as SearchScope)}
+            className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+            title="Buscar em"
+          >
+            <option value="tudo">Tudo</option>
+            <option value="material">Material</option>
+            <option value="deposito">Depósito</option>
+            <option value="posicao">Posição</option>
+            <option value="lote">Lote</option>
+            <option value="descricao">Descrição</option>
+          </select>
         </div>
-        <select
-          value={sort ? `${sort.key}:${sort.dir}` : ""}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (!v) setSort(null);
-            else { const [k, d] = v.split(":"); setSort({ key: k as SortKey, dir: d as "asc" | "desc" }); }
-          }}
-          className="h-9 rounded-md border border-input bg-background px-2 text-xs"
-          title="Ordenar por"
-        >
-          {sortOptions.flatMap((o) => [
-            <option key={`${o.k}:asc`} value={`${o.k}:asc`}>{o.label} ↑</option>,
-            <option key={`${o.k}:desc`} value={`${o.k}:desc`}>{o.label} ↓</option>,
-          ])}
-        </select>
-        <Button size="sm" variant="outline" onClick={() => setAddOpen(true)} title="Adicionar item fora da base">
-          <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Adicionar</span>
-        </Button>
+        <div className="flex gap-2">
+          <select
+            value={sort ? `${sort.key}:${sort.dir}` : ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) setSort(null);
+              else { const [k, d] = v.split(":"); setSort({ key: k as SortKey, dir: d as "asc" | "desc" }); }
+            }}
+            className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-xs"
+            title="Ordenar por"
+          >
+            {sortOptions.flatMap((o) => [
+              <option key={`${o.k}:asc`} value={`${o.k}:asc`}>{o.label} ↑</option>,
+              <option key={`${o.k}:desc`} value={`${o.k}:desc`}>{o.label} ↓</option>,
+            ])}
+          </select>
+          <Button size="sm" variant="outline" onClick={() => setAddOpen(true)} title="Adicionar item fora da base">
+            <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Adicionar</span>
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground px-1">
+          Dica: use <code>*</code> como coringa. Ex.: <code>123*</code> começa com 123.
+        </p>
       </div>
 
       {busy ? (
