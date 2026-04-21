@@ -65,6 +65,43 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
   const [filterStatus, setFilterStatus] = useState<"todos" | "ok" | "divergente" | "nao_contado">("todos");
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
   const [editingItem, setEditingItem] = useState<ItemRow | null>(null);
+  const { user } = useAuth();
+  const currentUser = emailPrefix(user?.email);
+  const [inlineEdit, setInlineEdit] = useState<{ itemId: string; value: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ItemRow | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
+  const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inlineEdit && inlineInputRef.current) {
+      inlineInputRef.current.focus();
+      inlineInputRef.current.select();
+    }
+  }, [inlineEdit]);
+
+  const saveInlineEdit = async () => {
+    if (!inlineEdit) return;
+    const qtd = parseNum(inlineEdit.value);
+    setSavingInline(true);
+    const { error } = await supabase.from("contagens").upsert(
+      { inventario_id: inventarioId, item_id: inlineEdit.itemId, nome_contador: currentUser, quantidade: qtd },
+      { onConflict: "item_id,nome_contador" },
+    );
+    setSavingInline(false);
+    if (error) { toast.error("Erro ao salvar", { description: error.message }); return; }
+    toast.success(`Contagem registrada por ${currentUser}`);
+    setInlineEdit(null);
+    await onChange();
+  };
+
+  const handleDeleteItem = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("itens").delete().eq("id", deleteTarget.id);
+    if (error) { toast.error("Erro ao excluir", { description: error.message }); return; }
+    toast.success("Item excluído");
+    setDeleteTarget(null);
+    await onChange();
+  };
 
   const contagensPorItem = useMemo(() => {
     const m = new Map<string, Contagem[]>();
