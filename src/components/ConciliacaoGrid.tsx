@@ -441,6 +441,13 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AdicionarItemDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSubmit={handleAddItem}
+        contadorLabel={currentUser}
+      />
     </div>
   );
 }
