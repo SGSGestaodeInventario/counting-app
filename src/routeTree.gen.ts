@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InventarioNovoRouteImport } from './routes/inventario.novo'
+import { Route as InventarioIdRouteImport } from './routes/inventario.$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,17 +35,24 @@ const InventarioNovoRoute = InventarioNovoRouteImport.update({
   path: '/inventario/novo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InventarioIdRoute = InventarioIdRouteImport.update({
+  id: '/inventario/$id',
+  path: '/inventario/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/inventario/$id': typeof InventarioIdRoute
   '/inventario/novo': typeof InventarioNovoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/inventario/$id': typeof InventarioIdRoute
   '/inventario/novo': typeof InventarioNovoRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/inventario/$id': typeof InventarioIdRoute
   '/inventario/novo': typeof InventarioNovoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/inventario/novo'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/inventario/$id'
+    | '/inventario/novo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/inventario/novo'
-  id: '__root__' | '/' | '/dashboard' | '/login' | '/inventario/novo'
+  to: '/' | '/dashboard' | '/login' | '/inventario/$id' | '/inventario/novo'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/inventario/$id'
+    | '/inventario/novo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  InventarioIdRoute: typeof InventarioIdRoute
   InventarioNovoRoute: typeof InventarioNovoRoute
 }
 
@@ -99,6 +120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventarioNovoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inventario/$id': {
+      id: '/inventario/$id'
+      path: '/inventario/$id'
+      fullPath: '/inventario/$id'
+      preLoaderRoute: typeof InventarioIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,6 +134,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  InventarioIdRoute: InventarioIdRoute,
   InventarioNovoRoute: InventarioNovoRoute,
 }
 export const routeTree = rootRouteImport
