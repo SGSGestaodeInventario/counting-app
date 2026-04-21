@@ -6,9 +6,8 @@
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// Para deploy no GitHub Pages (repo: CountingApp), build com:
-//   VITE_BASE_PATH=/CountingApp/ bun run build
-// O conteúdo de dist/client/ deve ser enviado para o branch gh-pages.
+// Para deploy estático, use npm run build.
+// O conteúdo de dist/client/ deve ser publicado como pasta final.
 const basePath = process.env.VITE_BASE_PATH || "/";
 
 export default defineConfig({
