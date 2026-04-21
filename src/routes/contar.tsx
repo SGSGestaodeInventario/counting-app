@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Boxes, KeyRound, ArrowLeft, Search, LogOut, Save, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { Boxes, Search, LogOut, Save, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { fmtNum, parseNum } from "@/lib/format";
-import { applySort, nextSort, type SortState } from "@/lib/sort";
+import { applySort, type SortState } from "@/lib/sort";
+import { TypewriterText } from "@/components/TypewriterText";
+import heroImg from "@/assets/login-hero.png";
 
 export const Route = createFileRoute("/contar")({ component: ContarPage });
 
@@ -64,43 +65,96 @@ function EntradaForm({ onEntrar }: { onEntrar: (s: Sessao) => void }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-4 py-12 bg-gradient-to-br from-background to-accent/30">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 mb-4">
-            <KeyRound className="h-7 w-7" />
-          </div>
-          <h1 className="text-2xl font-bold">Acesso de contador</h1>
-          <p className="text-sm text-muted-foreground mt-1">Use o ID e a senha fornecidos pelo responsável.</p>
+    <div className="min-h-screen grid md:grid-cols-2 bg-white text-black">
+      <div className="relative bg-neutral-100 overflow-hidden h-40 md:h-auto">
+        <img src={heroImg} alt="Inventário corporativo" className="w-full h-full object-cover" />
+      </div>
+
+      <div className="flex flex-col justify-between px-6 py-10 md:px-16 md:py-14">
+        <div className="flex items-center gap-2 text-black">
+          <Boxes className="h-5 w-5" />
+          <span className="text-sm font-medium tracking-tight">SGS</span>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Entrar no inventário</CardTitle>
-            <CardDescription>Você não precisa ter cadastro — apenas o ID e a senha.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={submit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="invid">ID do inventário</Label>
-                <Input id="invid" required value={inventarioId} onChange={(e) => setInventarioId(e.target.value)} placeholder="cole aqui o UUID" className="font-mono text-xs" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="senha">Senha</Label>
-                <Input id="senha" type="password" required value={senha} onChange={(e) => setSenha(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nome">Seu nome</Label>
-                <Input id="nome" required maxLength={100} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Identifica suas contagens" />
-              </div>
-              <Button type="submit" className="w-full" disabled={busy}>{busy ? "Validando…" : "Entrar e contar"}</Button>
-            </form>
-            <div className="mt-4 text-center">
-              <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-                <ArrowLeft className="h-3 w-3" /> Sou administrador
-              </Link>
+
+        <div className="flex-1 flex items-center justify-center py-10">
+          <div className="w-full max-w-sm">
+            <div className="mb-10">
+              <h1 className="text-3xl font-semibold tracking-tight text-black">
+                <TypewriterText text="Acesso de contador." />
+              </h1>
+              <p className="text-sm text-neutral-500 mt-2">
+                Use o ID e a senha fornecidos pelo responsável.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+
+            <form onSubmit={submit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="invid" className="text-xs font-medium text-neutral-700">ID do inventário</Label>
+                <Input
+                  id="invid"
+                  required
+                  value={inventarioId}
+                  onChange={(e) => setInventarioId(e.target.value)}
+                  placeholder="cole aqui o UUID"
+                  className="h-11 border-neutral-200 bg-white rounded-md font-mono text-xs focus-visible:ring-1 focus-visible:ring-black focus-visible:ring-offset-0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="senha" className="text-xs font-medium text-neutral-700">Senha</Label>
+                <Input
+                  id="senha"
+                  type="password"
+                  required
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="h-11 border-neutral-200 bg-white rounded-md focus-visible:ring-1 focus-visible:ring-black focus-visible:ring-offset-0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nome" className="text-xs font-medium text-neutral-700">Seu nome</Label>
+                <Input
+                  id="nome"
+                  required
+                  maxLength={100}
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Identifica suas contagens"
+                  className="h-11 border-neutral-200 bg-white rounded-md focus-visible:ring-1 focus-visible:ring-black focus-visible:ring-offset-0"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={busy}
+                className="h-11 w-full bg-black text-white hover:bg-neutral-800 rounded-md font-medium shadow-none"
+              >
+                {busy ? "Validando…" : "Entrar e contar"}
+              </Button>
+            </form>
+
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-neutral-200" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-3 text-[10px] uppercase tracking-[0.2em] text-neutral-400">
+                  ou
+                </span>
+              </div>
+            </div>
+
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 w-full border-neutral-300 text-black hover:bg-neutral-50 rounded-md shadow-none"
+            >
+              <Link to="/login">Sou administrador</Link>
+            </Button>
+          </div>
+        </div>
+
+        <p className="text-xs text-neutral-400 text-center md:text-left">
+          © SGS — Gestão de inventários
+        </p>
       </div>
     </div>
   );
