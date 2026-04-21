@@ -14,7 +14,173 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contagens: {
+        Row: {
+          created_at: string
+          id: string
+          inventario_id: string
+          item_id: string
+          nome_contador: string
+          quantidade: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventario_id: string
+          item_id: string
+          nome_contador: string
+          quantidade: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventario_id?: string
+          item_id?: string
+          nome_contador?: string
+          quantidade?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contagens_inventario_id_fkey"
+            columns: ["inventario_id"]
+            isOneToOne: false
+            referencedRelation: "inventarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contagens_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventarios: {
+        Row: {
+          created_at: string
+          criador_id: string
+          id: string
+          nome: string
+          senha_hash: string
+          status: Database["public"]["Enums"]["inventario_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criador_id: string
+          id?: string
+          nome: string
+          senha_hash: string
+          status?: Database["public"]["Enums"]["inventario_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criador_id?: string
+          id?: string
+          nome?: string
+          senha_hash?: string
+          status?: Database["public"]["Enums"]["inventario_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      itens: {
+        Row: {
+          bloqueado: number
+          centro: string | null
+          created_at: string
+          deposito: string | null
+          descricao: string | null
+          em_qualidade: number
+          estoque_especial: string | null
+          id: string
+          inventario_id: string
+          lote: string | null
+          material: string
+          num_estoque_especial: string | null
+          posicao: string | null
+          tipo_material: string | null
+          total_sap: number | null
+          transito_te: number
+          unid_medida: string | null
+          utilizacao_livre: number
+        }
+        Insert: {
+          bloqueado?: number
+          centro?: string | null
+          created_at?: string
+          deposito?: string | null
+          descricao?: string | null
+          em_qualidade?: number
+          estoque_especial?: string | null
+          id?: string
+          inventario_id: string
+          lote?: string | null
+          material: string
+          num_estoque_especial?: string | null
+          posicao?: string | null
+          tipo_material?: string | null
+          total_sap?: number | null
+          transito_te?: number
+          unid_medida?: string | null
+          utilizacao_livre?: number
+        }
+        Update: {
+          bloqueado?: number
+          centro?: string | null
+          created_at?: string
+          deposito?: string | null
+          descricao?: string | null
+          em_qualidade?: number
+          estoque_especial?: string | null
+          id?: string
+          inventario_id?: string
+          lote?: string | null
+          material?: string
+          num_estoque_especial?: string | null
+          posicao?: string | null
+          tipo_material?: string | null
+          total_sap?: number | null
+          transito_te?: number
+          unid_medida?: string | null
+          utilizacao_livre?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_inventario_id_fkey"
+            columns: ["inventario_id"]
+            isOneToOne: false
+            referencedRelation: "inventarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +189,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      inventario_status: "em_andamento" | "concluido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +316,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      inventario_status: ["em_andamento", "concluido"],
+    },
   },
 } as const
