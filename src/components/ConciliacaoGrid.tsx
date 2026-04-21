@@ -1,14 +1,22 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { fmtNum, parseNum } from "@/lib/format";
 import { exportConciliacao, type ExportRow } from "@/lib/excel";
-import { Download, Search, Pencil, Trash2, Plus } from "lucide-react";
+import { Download, Search, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { applySort, nextSort, sortIndicator, type SortState } from "@/lib/sort";
+import { useAuth } from "@/lib/auth";
+
+function emailPrefix(email: string | null | undefined): string {
+  if (!email) return "usuário";
+  const at = email.indexOf("@");
+  return at > 0 ? email.slice(0, at) : email;
+}
 
 export interface Contagem {
   item_id: string;
