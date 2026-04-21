@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Boxes, Search, LogOut, Save, AlertTriangle } from "lucide-react";
+import { Boxes, Search, LogOut, Save, AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { fmtNum, parseNum } from "@/lib/format";
 import { applySort, type SortState } from "@/lib/sort";
 import { TypewriterText } from "@/components/TypewriterText";
+import { AdicionarItemDialog, type NovoItemPayload } from "@/components/AdicionarItemDialog";
 import heroImg from "@/assets/login-hero.png";
 
 export const Route = createFileRoute("/contar")({ component: ContarPage });
@@ -170,6 +171,7 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
   const [filterMode, setFilterMode] = useState<FilterMode>("pendente");
   const [edicoes, setEdicoes] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
+  const [addOpen, setAddOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     setBusy(true);
@@ -239,6 +241,39 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
     }
   };
 
+  const criarItem = async (payload: NovoItemPayload) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("inv-acesso", {
+        body: {
+          action: "criar_item",
+          inventario_id: sessao.inventario_id,
+          senha: sessao.senha,
+          nome_contador: sessao.nome,
+          quantidade: payload.contagem,
+          item: {
+            material: payload.material,
+            descricao: payload.descricao,
+            centro: payload.centro,
+            deposito: payload.deposito,
+            lote: payload.lote,
+            posicao: payload.posicao,
+            estoque_especial: payload.estoque_especial,
+            num_estoque_especial: payload.num_estoque_especial,
+            unid_medida: payload.unid_medida,
+            tipo_material: payload.tipo_material,
+          },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Item ${payload.material} adicionado (sobra de ${fmtNum(payload.contagem)})`);
+      await refresh();
+    } catch (e) {
+      toast.error("Falha ao adicionar item", { description: (e as Error).message });
+      throw e;
+    }
+  };
+
   const stats = useMemo(() => {
     const total = itens.length;
     const ok = itens.filter((i) => i.status === "ok").length;
@@ -297,6 +332,9 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
             <option key={`${o.k}:desc`} value={`${o.k}:desc`}>{o.label} ↓</option>,
           ])}
         </select>
+        <Button size="sm" variant="outline" onClick={() => setAddOpen(true)} title="Adicionar item fora da base">
+          <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Adicionar</span>
+        </Button>
       </div>
 
       {busy ? (
@@ -320,6 +358,13 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
           ))}
         </div>
       )}
+
+      <AdicionarItemDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSubmit={criarItem}
+        contadorLabel={sessao.nome}
+      />
     </main>
   );
 }

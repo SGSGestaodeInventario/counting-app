@@ -65,6 +65,49 @@ Deno.serve(async (req) => {
       return json({ ok: true, itens, contagens });
     }
 
+    if (action === "criar_item") {
+      const { nome_contador, item, quantidade } = body;
+      if (!nome_contador || !item || typeof item !== "object" || typeof quantidade !== "number") {
+        return json({ error: "Dados inválidos" }, 400);
+      }
+      const nome = String(nome_contador).trim();
+      if (nome.length < 1 || nome.length > 100) return json({ error: "Nome inválido" }, 400);
+      const material = String(item.material ?? "").trim();
+      if (!material) return json({ error: "Material obrigatório" }, 400);
+
+      const insertItem = {
+        inventario_id,
+        material,
+        descricao: item.descricao ?? null,
+        centro: item.centro ?? null,
+        deposito: item.deposito ?? null,
+        lote: item.lote ?? null,
+        posicao: item.posicao ?? null,
+        estoque_especial: item.estoque_especial ?? null,
+        num_estoque_especial: item.num_estoque_especial ?? null,
+        unid_medida: item.unid_medida ?? null,
+        tipo_material: item.tipo_material ?? null,
+        em_qualidade: 0,
+        transito_te: 0,
+        bloqueado: 0,
+        utilizacao_livre: 0,
+        total_sap: 0,
+      };
+      const { data: novoItem, error: ie } = await admin
+        .from("itens")
+        .insert(insertItem)
+        .select("id")
+        .single();
+      if (ie || !novoItem) return json({ error: ie?.message ?? "Falha ao criar item" }, 500);
+
+      const { error: ce } = await admin
+        .from("contagens")
+        .insert({ inventario_id, item_id: novoItem.id, nome_contador: nome, quantidade });
+      if (ce) return json({ error: ce.message }, 500);
+
+      return json({ ok: true, item_id: novoItem.id });
+    }
+
     if (action === "salvar") {
       const { nome_contador, item_id, quantidade } = body;
       if (!nome_contador || !item_id || typeof quantidade !== "number") {
