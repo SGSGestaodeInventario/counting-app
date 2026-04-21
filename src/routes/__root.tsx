@@ -1,4 +1,4 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts, useNavigate } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function Header() {
   const { user, signOut } = useAuth();
   const nav = useNavigate();
+  const path = useRouterState({ select: (s) => s.location.pathname });
   if (!user) return null;
+  // Esconde header nas telas de entrada
+  if (path === "/login" || path === "/contar") return null;
   return (
     <header className="sticky top-0 z-30 border-b bg-card/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4">
