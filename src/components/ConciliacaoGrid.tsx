@@ -298,7 +298,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar material, descrição, lote, posição, est. especial…"
+            placeholder="Buscar (use * como coringa, ex.: 123*)…"
             className="pl-8 h-9"
           />
         </div>
@@ -347,14 +347,14 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
             </tr>
             {/* HEADER DE COLUNAS */}
             <tr className="head-row">
-              <Th k="material">Material</Th>
-              <Th k="descricao">Texto breve</Th>
-              <Th k="centro">Centro</Th>
-              <Th k="deposito">Depósito</Th>
-              <Th k="lote">Lote</Th>
-              <Th k="posicao">Posição</Th>
-              <Th k="estoque_especial">Est. especial</Th>
-              <Th k="num_estoque_especial">Nº est. especial</Th>
+              <Th k="material" filterKey="material">Material</Th>
+              <Th k="descricao" filterKey="descricao">Texto breve</Th>
+              <Th k="centro" filterKey="centro">Centro</Th>
+              <Th k="deposito" filterKey="deposito">Depósito</Th>
+              <Th k="lote" filterKey="lote">Lote</Th>
+              <Th k="posicao" filterKey="posicao">Posição</Th>
+              <Th k="estoque_especial" filterKey="estoque_especial">Est. especial</Th>
+              <Th k="num_estoque_especial" filterKey="num_estoque_especial">Nº est. especial</Th>
               {expandSAP && <>
                 <Th k="em_qualidade" num>Em contr.qual.</Th>
                 <Th k="transito_te" num>Trânsito e TE</Th>
@@ -370,7 +370,17 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
               </th>
               <Th k="contagem" num>Contagem</Th>
               <Th k="diferenca" num>Diferença</Th>
-              <th>Contador</th>
+              <th className={columnFilters.contador.size > 0 ? "bg-accent" : ""}>
+                <span className="inline-flex items-center">
+                  <span>Contador</span>
+                  <ColumnFilter
+                    label="Contador"
+                    values={uniqueValues("contador")}
+                    selected={columnFilters.contador}
+                    onChange={(next) => setColFilter("contador", next)}
+                  />
+                </span>
+              </th>
               <th>Ações</th>
             </tr>
           </thead>
