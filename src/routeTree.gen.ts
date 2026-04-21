@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ContarRouteImport } from './routes/contar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InventarioNovoRouteImport } from './routes/inventario.novo'
 import { Route as InventarioIdRouteImport } from './routes/inventario.$id'
@@ -23,6 +24,11 @@ const LoginRoute = LoginRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContarRoute = ContarRouteImport.update({
+  id: '/contar',
+  path: '/contar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +49,7 @@ const InventarioIdRoute = InventarioIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/contar': typeof ContarRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/inventario/$id': typeof InventarioIdRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/contar': typeof ContarRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/inventario/$id': typeof InventarioIdRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/contar': typeof ContarRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/inventario/$id': typeof InventarioIdRoute
@@ -67,15 +76,23 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/contar'
     | '/dashboard'
     | '/login'
     | '/inventario/$id'
     | '/inventario/novo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/inventario/$id' | '/inventario/novo'
+  to:
+    | '/'
+    | '/contar'
+    | '/dashboard'
+    | '/login'
+    | '/inventario/$id'
+    | '/inventario/novo'
   id:
     | '__root__'
     | '/'
+    | '/contar'
     | '/dashboard'
     | '/login'
     | '/inventario/$id'
@@ -84,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ContarRoute: typeof ContarRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   InventarioIdRoute: typeof InventarioIdRoute
@@ -104,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contar': {
+      id: '/contar'
+      path: '/contar'
+      fullPath: '/contar'
+      preLoaderRoute: typeof ContarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -132,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ContarRoute: ContarRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   InventarioIdRoute: InventarioIdRoute,
