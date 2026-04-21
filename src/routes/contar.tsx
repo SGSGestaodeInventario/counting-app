@@ -8,6 +8,7 @@ import { Boxes, Search, LogOut, Save, AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { fmtNum, parseNum } from "@/lib/format";
 import { applySort, type SortState } from "@/lib/sort";
+import { matchesQuery, matchesAny } from "@/lib/search";
 import { TypewriterText } from "@/components/TypewriterText";
 import { AdicionarItemDialog, type NovoItemPayload } from "@/components/AdicionarItemDialog";
 import heroImg from "@/assets/login-hero.png";
@@ -164,10 +165,13 @@ function EntradaForm({ onEntrar }: { onEntrar: (s: Sessao) => void }) {
 type SortKey = "material" | "descricao" | "lote" | "posicao" | "total_sap";
 type FilterMode = "pendente" | "recontagem" | "ok";
 
+type SearchScope = "tudo" | "material" | "deposito" | "posicao" | "lote" | "descricao";
+
 function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }) {
   const [itens, setItens] = useState<ItemContagem[]>([]);
   const [busy, setBusy] = useState(true);
   const [search, setSearch] = useState("");
+  const [searchScope, setSearchScope] = useState<SearchScope>("tudo");
   const [filterMode, setFilterMode] = useState<FilterMode>("pendente");
   const [edicoes, setEdicoes] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
