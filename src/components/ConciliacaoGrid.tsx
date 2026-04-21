@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { applySort, nextSort, sortIndicator, type SortState } from "@/lib/sort";
 import { useAuth } from "@/lib/auth";
 import { AdicionarItemDialog, type NovoItemPayload } from "@/components/AdicionarItemDialog";
+import { ColumnFilter } from "@/components/ColumnFilter";
+import { matchesAny } from "@/lib/search";
 
 function emailPrefix(email: string | null | undefined): string {
   if (!email) return "usuário";
@@ -59,12 +61,21 @@ type SortKey =
   | "em_qualidade" | "transito_te" | "bloqueado" | "utilizacao_livre"
   | "total_sap" | "contagem" | "diferenca";
 
+type FilterableKey =
+  | "material" | "descricao" | "centro" | "deposito" | "lote" | "posicao"
+  | "estoque_especial" | "num_estoque_especial" | "contador";
+
 export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens, onChange }: Props) {
   const [search, setSearch] = useState("");
   const [expandSAP, setExpandSAP] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"todos" | "ok" | "divergente" | "nao_contado">("todos");
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
-  
+  const [columnFilters, setColumnFilters] = useState<Record<FilterableKey, Set<string>>>({
+    material: new Set(), descricao: new Set(), centro: new Set(), deposito: new Set(),
+    lote: new Set(), posicao: new Set(), estoque_especial: new Set(), num_estoque_especial: new Set(),
+    contador: new Set(),
+  });
+
   const { user } = useAuth();
   const currentUser = emailPrefix(user?.email);
   const [inlineEdit, setInlineEdit] = useState<{ itemId: string; value: string } | null>(null);
@@ -152,21 +163,64 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
     return m;
   }, [contagens]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const base = rows.filter((r) => {
-      if (q) {
-        const hay = [r.material, r.descricao, r.centro, r.deposito, r.lote, r.posicao, r.estoque_especial, r.num_estoque_especial]
-          .filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
+  // Nome do contador "exibido" (último/único) por item — espelha lógica da célula Contador.
+  const contadorExibidoPorItem = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const [itemId, cs] of contagensPorItem.entries()) {
+      if (cs.length > 0) m.set(itemId, cs[cs.length - 1].nome_contador);
+    }
+    return m;
+  }, [contagensPorItem]);
+
+  const getColValue = (r: ItemRow, k: FilterableKey): string => {
+    if (k === "contador") return contadorExibidoPorItem.get(r.id) ?? "";
+    return (r[k] ?? "") as string;
+  };
+
+  /**
+   * Aplica TODOS os filtros (busca + status + colunas) com a opção de excluir UMA coluna.
+   * Usado para calcular os valores únicos de cada coluna no estilo Excel
+   * (a coluna sendo aberta mostra valores ignorando seu próprio filtro).
+   */
+  const applyFilters = (excludeCol: FilterableKey | null): ItemRow[] => {
+    return rows.filter((r) => {
+      if (search.trim()) {
+        const ok = matchesAny(
+          [r.material, r.descricao, r.centro, r.deposito, r.lote, r.posicao, r.estoque_especial, r.num_estoque_especial],
+          search,
+        );
+        if (!ok) return false;
       }
       if (filterStatus === "ok" && !(r.contado && Math.abs(r.diferenca) < 0.0001)) return false;
       if (filterStatus === "divergente" && !(r.contado && Math.abs(r.diferenca) >= 0.0001)) return false;
       if (filterStatus === "nao_contado" && r.contado) return false;
+      for (const k of Object.keys(columnFilters) as FilterableKey[]) {
+        if (k === excludeCol) continue;
+        const sel = columnFilters[k];
+        if (sel.size === 0) continue;
+        const v = getColValue(r, k);
+        const key = v || "(vazio)";
+        if (!sel.has(key)) return false;
+      }
       return true;
     });
+  };
+
+  const filtered = useMemo(() => {
+    const base = applyFilters(null);
     return applySort(base, sort, (r, k) => (r as unknown as Record<string, unknown>)[k]);
-  }, [rows, search, filterStatus, sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, search, filterStatus, sort, columnFilters, contadorExibidoPorItem]);
+
+  const uniqueValues = (k: FilterableKey): string[] => {
+    const base = applyFilters(k);
+    const set = new Set<string>();
+    for (const r of base) set.add(getColValue(r, k));
+    return [...set];
+  };
+
+  const setColFilter = (k: FilterableKey, next: Set<string>) =>
+    setColumnFilters((prev) => ({ ...prev, [k]: next }));
 
   const totals = useMemo(() => {
     return filtered.reduce(
@@ -209,15 +263,28 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
     exportConciliacao(`${inventarioNome.replace(/[^\w]+/g, "_")}_conciliacao.xlsx`, data);
   }, [filtered, inventarioNome, contagensPorItem]);
 
-  const Th = ({ k, children, num }: { k: SortKey; children: React.ReactNode; num?: boolean }) => (
-    <th
-      className={`sortable ${num ? "num" : ""}`}
-      onDoubleClick={() => setSort((s) => nextSort(s, k))}
-      title="Duplo-clique para ordenar"
-    >
-      {children}{sortIndicator(sort, k)}
-    </th>
-  );
+  const Th = ({ k, children, num, filterKey }: { k: SortKey; children: React.ReactNode; num?: boolean; filterKey?: FilterableKey }) => {
+    const active = filterKey ? columnFilters[filterKey].size > 0 : false;
+    return (
+      <th
+        className={`sortable ${num ? "num" : ""} ${active ? "bg-accent" : ""}`}
+        onDoubleClick={() => setSort((s) => nextSort(s, k))}
+        title="Duplo-clique para ordenar"
+      >
+        <span className="inline-flex items-center">
+          <span>{children}{sortIndicator(sort, k)}</span>
+          {filterKey && (
+            <ColumnFilter
+              label={String(children)}
+              values={uniqueValues(filterKey)}
+              selected={columnFilters[filterKey]}
+              onChange={(next) => setColFilter(filterKey, next)}
+            />
+          )}
+        </span>
+      </th>
+    );
+  };
 
   // colunas visíveis (para colspan da linha de totais)
   const colunasTexto = 8 + (expandSAP ? 0 : 0); // material..num_est_esp = 8
@@ -231,7 +298,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar material, descrição, lote, posição, est. especial…"
+            placeholder="Buscar (use * como coringa, ex.: 123*)…"
             className="pl-8 h-9"
           />
         </div>
@@ -280,14 +347,14 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
             </tr>
             {/* HEADER DE COLUNAS */}
             <tr className="head-row">
-              <Th k="material">Material</Th>
-              <Th k="descricao">Texto breve</Th>
-              <Th k="centro">Centro</Th>
-              <Th k="deposito">Depósito</Th>
-              <Th k="lote">Lote</Th>
-              <Th k="posicao">Posição</Th>
-              <Th k="estoque_especial">Est. especial</Th>
-              <Th k="num_estoque_especial">Nº est. especial</Th>
+              <Th k="material" filterKey="material">Material</Th>
+              <Th k="descricao" filterKey="descricao">Texto breve</Th>
+              <Th k="centro" filterKey="centro">Centro</Th>
+              <Th k="deposito" filterKey="deposito">Depósito</Th>
+              <Th k="lote" filterKey="lote">Lote</Th>
+              <Th k="posicao" filterKey="posicao">Posição</Th>
+              <Th k="estoque_especial" filterKey="estoque_especial">Est. especial</Th>
+              <Th k="num_estoque_especial" filterKey="num_estoque_especial">Nº est. especial</Th>
               {expandSAP && <>
                 <Th k="em_qualidade" num>Em contr.qual.</Th>
                 <Th k="transito_te" num>Trânsito e TE</Th>
@@ -303,7 +370,17 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
               </th>
               <Th k="contagem" num>Contagem</Th>
               <Th k="diferenca" num>Diferença</Th>
-              <th>Contador</th>
+              <th className={columnFilters.contador.size > 0 ? "bg-accent" : ""}>
+                <span className="inline-flex items-center">
+                  <span>Contador</span>
+                  <ColumnFilter
+                    label="Contador"
+                    values={uniqueValues("contador")}
+                    selected={columnFilters.contador}
+                    onChange={(next) => setColFilter("contador", next)}
+                  />
+                </span>
+              </th>
               <th>Ações</th>
             </tr>
           </thead>

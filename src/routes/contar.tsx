@@ -8,6 +8,7 @@ import { Boxes, Search, LogOut, Save, AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { fmtNum, parseNum } from "@/lib/format";
 import { applySort, type SortState } from "@/lib/sort";
+import { matchesQuery, matchesAny } from "@/lib/search";
 import { TypewriterText } from "@/components/TypewriterText";
 import { AdicionarItemDialog, type NovoItemPayload } from "@/components/AdicionarItemDialog";
 import heroImg from "@/assets/login-hero.png";
@@ -164,10 +165,13 @@ function EntradaForm({ onEntrar }: { onEntrar: (s: Sessao) => void }) {
 type SortKey = "material" | "descricao" | "lote" | "posicao" | "total_sap";
 type FilterMode = "pendente" | "recontagem" | "ok";
 
+type SearchScope = "tudo" | "material" | "deposito" | "posicao" | "lote" | "descricao";
+
 function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }) {
   const [itens, setItens] = useState<ItemContagem[]>([]);
   const [busy, setBusy] = useState(true);
   const [search, setSearch] = useState("");
+  const [searchScope, setSearchScope] = useState<SearchScope>("tudo");
   const [filterMode, setFilterMode] = useState<FilterMode>("pendente");
   const [edicoes, setEdicoes] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
@@ -210,17 +214,26 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
   useEffect(() => { refresh(); }, [refresh]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     const base = itens.filter((i) => {
       if (i.status !== filterMode) return false;
-      if (q) {
-        const hay = [i.material, i.descricao, i.centro, i.deposito, i.lote, i.posicao, i.estoque_especial].filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
+      if (!search.trim()) return true;
+      if (searchScope === "tudo") {
+        return matchesAny(
+          [i.material, i.descricao, i.centro, i.deposito, i.lote, i.posicao, i.estoque_especial],
+          search,
+        );
       }
-      return true;
+      const fieldMap: Record<Exclude<SearchScope, "tudo">, string | null> = {
+        material: i.material,
+        descricao: i.descricao,
+        deposito: i.deposito,
+        posicao: i.posicao,
+        lote: i.lote,
+      };
+      return matchesQuery(fieldMap[searchScope], search);
     });
     return applySort(base, sort, (r, k) => (r as unknown as Record<string, unknown>)[k]);
-  }, [itens, search, filterMode, sort]);
+  }, [itens, search, searchScope, filterMode, sort]);
 
   const salvarContagem = async (item: ItemContagem, valor: string) => {
     const qtd = parseNum(valor);
@@ -311,30 +324,55 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
         <FilterTab active={filterMode === "ok"} onClick={() => setFilterMode("ok")} label="OK" count={stats.ok} cls="text-success" />
       </div>
 
-      {/* BUSCA + ORDENAÇÃO */}
-      <div className="flex gap-2 mb-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…" className="pl-8 h-9" />
+      {/* BUSCA + ESCOPO + ORDENAÇÃO */}
+      <div className="space-y-1 mb-3">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar (use * como coringa)…"
+              className="pl-8 h-9"
+            />
+          </div>
+          <select
+            value={searchScope}
+            onChange={(e) => setSearchScope(e.target.value as SearchScope)}
+            className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+            title="Buscar em"
+          >
+            <option value="tudo">Tudo</option>
+            <option value="material">Material</option>
+            <option value="deposito">Depósito</option>
+            <option value="posicao">Posição</option>
+            <option value="lote">Lote</option>
+            <option value="descricao">Descrição</option>
+          </select>
         </div>
-        <select
-          value={sort ? `${sort.key}:${sort.dir}` : ""}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (!v) setSort(null);
-            else { const [k, d] = v.split(":"); setSort({ key: k as SortKey, dir: d as "asc" | "desc" }); }
-          }}
-          className="h-9 rounded-md border border-input bg-background px-2 text-xs"
-          title="Ordenar por"
-        >
-          {sortOptions.flatMap((o) => [
-            <option key={`${o.k}:asc`} value={`${o.k}:asc`}>{o.label} ↑</option>,
-            <option key={`${o.k}:desc`} value={`${o.k}:desc`}>{o.label} ↓</option>,
-          ])}
-        </select>
-        <Button size="sm" variant="outline" onClick={() => setAddOpen(true)} title="Adicionar item fora da base">
-          <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Adicionar</span>
-        </Button>
+        <div className="flex gap-2">
+          <select
+            value={sort ? `${sort.key}:${sort.dir}` : ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) setSort(null);
+              else { const [k, d] = v.split(":"); setSort({ key: k as SortKey, dir: d as "asc" | "desc" }); }
+            }}
+            className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-xs"
+            title="Ordenar por"
+          >
+            {sortOptions.flatMap((o) => [
+              <option key={`${o.k}:asc`} value={`${o.k}:asc`}>{o.label} ↑</option>,
+              <option key={`${o.k}:desc`} value={`${o.k}:desc`}>{o.label} ↓</option>,
+            ])}
+          </select>
+          <Button size="sm" variant="outline" onClick={() => setAddOpen(true)} title="Adicionar item fora da base">
+            <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Adicionar</span>
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground px-1">
+          Dica: use <code>*</code> como coringa. Ex.: <code>123*</code> começa com 123.
+        </p>
       </div>
 
       {busy ? (
