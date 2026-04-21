@@ -121,7 +121,18 @@
   position: sticky;
   top: 0;
   z-index: 2;
+  user-select: none;
 }
+.excel-grid thead th.sortable { cursor: pointer; }
+.excel-grid thead th.sortable:hover { background: var(--color-accent); }
+.excel-grid thead tr.totals-row td {
+  background: color-mix(in oklab, var(--color-primary) 8%, var(--color-grid-header));
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+.excel-grid thead tr.head-row th { top: 34px; }
 .excel-grid tbody tr:nth-child(even) td { background: var(--color-grid-row-alt); }
 .excel-grid tbody tr:hover td { background: var(--color-accent); }
 .excel-grid .num { text-align: right; font-variant-numeric: tabular-nums; }

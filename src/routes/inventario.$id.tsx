@@ -28,6 +28,8 @@ interface ItemDB {
   deposito: string | null;
   lote: string | null;
   posicao: string | null;
+  estoque_especial: string | null;
+  num_estoque_especial: string | null;
   em_qualidade: number;
   transito_te: number;
   bloqueado: number;
