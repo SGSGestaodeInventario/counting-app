@@ -88,7 +88,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
       num_estoque_especial: payload.num_estoque_especial,
       unid_medida: payload.unid_medida,
       tipo_material: payload.tipo_material,
-      em_qualidade: 0, transito_te: 0, bloqueado: 0, utilizacao_livre: 0, total_sap: 0,
+      em_qualidade: 0, transito_te: 0, bloqueado: 0, utilizacao_livre: 0,
     }).select("id").single();
     if (ie || !novo) { toast.error("Erro ao adicionar item", { description: ie?.message }); return; }
     const { error: ce } = await supabase.from("contagens").insert({
