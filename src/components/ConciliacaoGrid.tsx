@@ -317,22 +317,21 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
                         disabled={savingInline}
                         className="h-7 text-right tabular-nums"
                       />
-                    ) : r.contado ? (
-                      <span>
-                        {fmtNum(r.contagem)}
-                        {cs.length > 1 && <span className="text-[10px] text-muted-foreground block">{cs.length} contadores</span>}
-                      </span>
-                    ) : "—"}
-                  </td>
-                  <td className="text-xs text-muted-foreground">
-                    {cs.length === 0 ? "—" : cs.length === 1 ? cs[0].nome_contador : (
-                      <span title={cs.map((c) => c.nome_contador).join(", ")}>
-                        {cs[cs.length - 1].nome_contador} <span className="text-[10px]">+{cs.length - 1}</span>
-                      </span>
-                    )}
+                    ) : r.contado ? fmtNum(r.contagem) : "—"}
                   </td>
                   <td className={`num font-medium ${!r.contado ? "text-muted-foreground" : Math.abs(r.diferenca) > 0.0001 ? "text-destructive" : "text-success"}`}>
                     {r.contado ? fmtNum(r.diferenca) : "—"}
+                  </td>
+                  <td
+                    className="text-xs text-muted-foreground cursor-pointer"
+                    title={cs.length ? "Duplo-clique para ver contagens" : "—"}
+                    onDoubleClick={() => { if (cs.length) setContadoresItem(r); }}
+                  >
+                    {cs.length === 0 ? "—" : cs.length === 1 ? cs[0].nome_contador : (
+                      <span>
+                        {cs[cs.length - 1].nome_contador} <span className="text-[10px]">+{cs.length - 1}</span>
+                      </span>
+                    )}
                   </td>
                   <td>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteTarget(r)} title="Excluir item">
