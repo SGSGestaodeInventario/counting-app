@@ -33,19 +33,20 @@ Colunas reconhecidas (acentos e espaços ignorados):
 
 **Total SAP** é calculado automaticamente: `Em contr.qualidade + Trânsito e TE + Bloqueado + Utilização livre`.
 
-## Build e deploy no GitHub Pages
+## Build e deploy no Cloudflare Pages
 
 ```bash
-# Repo no GitHub: CountingApp
-VITE_BASE_PATH=/CountingApp/ bun run build
-
-# Suba apenas a pasta dist/client/ para o branch gh-pages
-# (use git worktree, gh-pages npm package, ou GitHub Actions)
+npm install --legacy-peer-deps
+npm run build
 ```
 
-Configure GH Pages no repositório → branch `gh-pages` → pasta `/`.
+Configure no Cloudflare Pages:
 
-> ⚠️ **Importante:** o backend (Lovable Cloud) **não vai pra GH Pages**. Ele continua rodando no domínio do Lovable, e o frontend chama via HTTPS com CORS já liberado.
+- **Build command**: `npm run build`
+- **Build output directory**: `dist/client`
+- **Node version**: `20`
+
+Se o Cloudflare tentar usar Bun por detectar `bun.lockb`, remova esse arquivo no GitHub ou configure o projeto para usar npm nas configurações de build.
 
 ## Arquitetura
 
