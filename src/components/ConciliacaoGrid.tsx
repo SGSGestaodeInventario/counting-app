@@ -258,8 +258,8 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
                 Total SAP {expandSAP ? "▾" : "▸"}{sortIndicator(sort, "total_sap")}
               </th>
               <Th k="contagem" num>Contagem</Th>
-              <th>Contador</th>
               <Th k="diferenca" num>Diferença</Th>
+              <th>Contador</th>
               <th>Ações</th>
             </tr>
           </thead>
