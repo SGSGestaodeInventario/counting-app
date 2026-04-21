@@ -214,17 +214,26 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
   useEffect(() => { refresh(); }, [refresh]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     const base = itens.filter((i) => {
       if (i.status !== filterMode) return false;
-      if (q) {
-        const hay = [i.material, i.descricao, i.centro, i.deposito, i.lote, i.posicao, i.estoque_especial].filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
+      if (!search.trim()) return true;
+      if (searchScope === "tudo") {
+        return matchesAny(
+          [i.material, i.descricao, i.centro, i.deposito, i.lote, i.posicao, i.estoque_especial],
+          search,
+        );
       }
-      return true;
+      const fieldMap: Record<Exclude<SearchScope, "tudo">, string | null> = {
+        material: i.material,
+        descricao: i.descricao,
+        deposito: i.deposito,
+        posicao: i.posicao,
+        lote: i.lote,
+      };
+      return matchesQuery(fieldMap[searchScope], search);
     });
     return applySort(base, sort, (r, k) => (r as unknown as Record<string, unknown>)[k]);
-  }, [itens, search, filterMode, sort]);
+  }, [itens, search, searchScope, filterMode, sort]);
 
   const salvarContagem = async (item: ItemContagem, valor: string) => {
     const qtd = parseNum(valor);
