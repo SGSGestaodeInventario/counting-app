@@ -366,6 +366,52 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!contadoresItem} onOpenChange={(v) => !v && setContadoresItem(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-mono text-base">{contadoresItem?.material}</DialogTitle>
+            <DialogDescription>
+              {contadoresItem?.descricao ?? ""} · Total SAP: <strong>{contadoresItem ? fmtNum(contadoresItem.total_sap) : ""}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 max-h-[60vh] overflow-auto">
+            {(contadoresItem ? contagensPorItem.get(contadoresItem.id) ?? [] : []).map((c) => (
+              <li key={c.nome_contador} className="flex items-center gap-3 border rounded-md p-2.5 text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{c.nome_contador}</div>
+                  <div className="text-[10px] text-muted-foreground">{new Date(c.updated_at).toLocaleString("pt-BR")}</div>
+                </div>
+                <div className="tabular-nums font-semibold">{fmtNum(c.quantidade)}</div>
+                <Button
+                  variant="ghost" size="sm" className="h-8 w-8 p-0"
+                  onClick={() => setDeleteContagem({ itemId: contadoresItem!.id, nome: c.nome_contador })}
+                  title="Excluir contagem"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteContagem} onOpenChange={(v) => !v && setDeleteContagem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir contagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a contagem de <strong>{deleteContagem?.nome}</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteContagem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
