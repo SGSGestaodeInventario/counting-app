@@ -57,7 +57,7 @@ function LoginPage() {
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 mb-4">
             <Boxes className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">InvControl</h1>
+          <h1 className="text-2xl font-bold"><TypewriterText text="App de contagens." /></h1>
           <p className="text-sm text-muted-foreground mt-1">Gestão de inventários SAP</p>
         </div>
         <Card>
