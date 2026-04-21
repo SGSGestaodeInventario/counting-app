@@ -248,6 +248,9 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="h-4 w-4 mr-1" /> Exportar Excel
         </Button>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar item
+        </Button>
       </div>
 
       <div className="text-xs text-muted-foreground">
