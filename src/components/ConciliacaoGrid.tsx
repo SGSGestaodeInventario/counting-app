@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { applySort, nextSort, sortIndicator, type SortState } from "@/lib/sort";
 import { useAuth } from "@/lib/auth";
 import { AdicionarItemDialog, type NovoItemPayload } from "@/components/AdicionarItemDialog";
+import { ColumnFilter } from "@/components/ColumnFilter";
+import { matchesAny } from "@/lib/search";
 
 function emailPrefix(email: string | null | undefined): string {
   if (!email) return "usuário";
