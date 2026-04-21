@@ -5,11 +5,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { fmtNum, parseNum } from "@/lib/format";
 import { exportConciliacao, type ExportRow } from "@/lib/excel";
-import { Download, Search, Trash2 } from "lucide-react";
+import { Download, Search, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { applySort, nextSort, sortIndicator, type SortState } from "@/lib/sort";
 import { useAuth } from "@/lib/auth";
+import { AdicionarItemDialog, type NovoItemPayload } from "@/components/AdicionarItemDialog";
 
 function emailPrefix(email: string | null | undefined): string {
   if (!email) return "usuário";

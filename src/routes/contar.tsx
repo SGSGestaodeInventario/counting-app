@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Boxes, Search, LogOut, Save, AlertTriangle } from "lucide-react";
+import { Boxes, Search, LogOut, Save, AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { fmtNum, parseNum } from "@/lib/format";
 import { applySort, type SortState } from "@/lib/sort";
 import { TypewriterText } from "@/components/TypewriterText";
+import { AdicionarItemDialog, type NovoItemPayload } from "@/components/AdicionarItemDialog";
 import heroImg from "@/assets/login-hero.png";
 
 export const Route = createFileRoute("/contar")({ component: ContarPage });
