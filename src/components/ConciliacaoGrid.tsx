@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { fmtNum, parseNum } from "@/lib/format";
 import { exportConciliacao, type ExportRow } from "@/lib/excel";
 import { Download, Search, Trash2 } from "lucide-react";
@@ -67,8 +68,22 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
   const currentUser = emailPrefix(user?.email);
   const [inlineEdit, setInlineEdit] = useState<{ itemId: string; value: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ItemRow | null>(null);
+  const [contadoresItem, setContadoresItem] = useState<ItemRow | null>(null);
+  const [deleteContagem, setDeleteContagem] = useState<{ itemId: string; nome: string } | null>(null);
   const [savingInline, setSavingInline] = useState(false);
   const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDeleteContagem = async () => {
+    if (!deleteContagem) return;
+    const { error } = await supabase.from("contagens").delete()
+      .eq("inventario_id", inventarioId)
+      .eq("item_id", deleteContagem.itemId)
+      .eq("nome_contador", deleteContagem.nome);
+    if (error) { toast.error("Erro ao excluir contagem", { description: error.message }); return; }
+    toast.success(`Contagem de ${deleteContagem.nome} excluída`);
+    setDeleteContagem(null);
+    await onChange();
+  };
 
   useEffect(() => {
     if (inlineEdit && inlineInputRef.current) {
@@ -230,8 +245,8 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
               </>}
               <td className="num">{fmtNum(totals.sap)}</td>
               <td className="num">{fmtNum(totals.contagem)}</td>
-              <td></td>
               <td className={`num ${Math.abs(totals.dif) > 0.0001 ? "text-destructive" : "text-success"}`}>{fmtNum(totals.dif)}</td>
+              <td></td>
               <td></td>
             </tr>
             {/* HEADER DE COLUNAS */}
@@ -258,8 +273,8 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
                 Total SAP {expandSAP ? "▾" : "▸"}{sortIndicator(sort, "total_sap")}
               </th>
               <Th k="contagem" num>Contagem</Th>
-              <th>Contador</th>
               <Th k="diferenca" num>Diferença</Th>
+              <th>Contador</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -303,22 +318,21 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
                         disabled={savingInline}
                         className="h-7 text-right tabular-nums"
                       />
-                    ) : r.contado ? (
-                      <span>
-                        {fmtNum(r.contagem)}
-                        {cs.length > 1 && <span className="text-[10px] text-muted-foreground block">{cs.length} contadores</span>}
-                      </span>
-                    ) : "—"}
-                  </td>
-                  <td className="text-xs text-muted-foreground">
-                    {cs.length === 0 ? "—" : cs.length === 1 ? cs[0].nome_contador : (
-                      <span title={cs.map((c) => c.nome_contador).join(", ")}>
-                        {cs[cs.length - 1].nome_contador} <span className="text-[10px]">+{cs.length - 1}</span>
-                      </span>
-                    )}
+                    ) : r.contado ? fmtNum(r.contagem) : "—"}
                   </td>
                   <td className={`num font-medium ${!r.contado ? "text-muted-foreground" : Math.abs(r.diferenca) > 0.0001 ? "text-destructive" : "text-success"}`}>
                     {r.contado ? fmtNum(r.diferenca) : "—"}
+                  </td>
+                  <td
+                    className="text-xs text-muted-foreground cursor-pointer"
+                    title={cs.length ? "Duplo-clique para ver contagens" : "—"}
+                    onDoubleClick={() => { if (cs.length) setContadoresItem(r); }}
+                  >
+                    {cs.length === 0 ? "—" : cs.length === 1 ? cs[0].nome_contador : (
+                      <span>
+                        {cs[cs.length - 1].nome_contador} <span className="text-[10px]">+{cs.length - 1}</span>
+                      </span>
+                    )}
                   </td>
                   <td>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteTarget(r)} title="Excluir item">
@@ -347,6 +361,52 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteItem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!contadoresItem} onOpenChange={(v) => !v && setContadoresItem(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-mono text-base">{contadoresItem?.material}</DialogTitle>
+            <DialogDescription>
+              {contadoresItem?.descricao ?? ""} · Total SAP: <strong>{contadoresItem ? fmtNum(contadoresItem.total_sap) : ""}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 max-h-[60vh] overflow-auto">
+            {(contadoresItem ? contagensPorItem.get(contadoresItem.id) ?? [] : []).map((c) => (
+              <li key={c.nome_contador} className="flex items-center gap-3 border rounded-md p-2.5 text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{c.nome_contador}</div>
+                  <div className="text-[10px] text-muted-foreground">{new Date(c.updated_at).toLocaleString("pt-BR")}</div>
+                </div>
+                <div className="tabular-nums font-semibold">{fmtNum(c.quantidade)}</div>
+                <Button
+                  variant="ghost" size="sm" className="h-8 w-8 p-0"
+                  onClick={() => setDeleteContagem({ itemId: contadoresItem!.id, nome: c.nome_contador })}
+                  title="Excluir contagem"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteContagem} onOpenChange={(v) => !v && setDeleteContagem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir contagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a contagem de <strong>{deleteContagem?.nome}</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteContagem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
