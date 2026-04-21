@@ -163,21 +163,64 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
     return m;
   }, [contagens]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const base = rows.filter((r) => {
-      if (q) {
-        const hay = [r.material, r.descricao, r.centro, r.deposito, r.lote, r.posicao, r.estoque_especial, r.num_estoque_especial]
-          .filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
+  // Nome do contador "exibido" (último/único) por item — espelha lógica da célula Contador.
+  const contadorExibidoPorItem = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const [itemId, cs] of contagensPorItem.entries()) {
+      if (cs.length > 0) m.set(itemId, cs[cs.length - 1].nome_contador);
+    }
+    return m;
+  }, [contagensPorItem]);
+
+  const getColValue = (r: ItemRow, k: FilterableKey): string => {
+    if (k === "contador") return contadorExibidoPorItem.get(r.id) ?? "";
+    return (r[k] ?? "") as string;
+  };
+
+  /**
+   * Aplica TODOS os filtros (busca + status + colunas) com a opção de excluir UMA coluna.
+   * Usado para calcular os valores únicos de cada coluna no estilo Excel
+   * (a coluna sendo aberta mostra valores ignorando seu próprio filtro).
+   */
+  const applyFilters = (excludeCol: FilterableKey | null): ItemRow[] => {
+    return rows.filter((r) => {
+      if (search.trim()) {
+        const ok = matchesAny(
+          [r.material, r.descricao, r.centro, r.deposito, r.lote, r.posicao, r.estoque_especial, r.num_estoque_especial],
+          search,
+        );
+        if (!ok) return false;
       }
       if (filterStatus === "ok" && !(r.contado && Math.abs(r.diferenca) < 0.0001)) return false;
       if (filterStatus === "divergente" && !(r.contado && Math.abs(r.diferenca) >= 0.0001)) return false;
       if (filterStatus === "nao_contado" && r.contado) return false;
+      for (const k of Object.keys(columnFilters) as FilterableKey[]) {
+        if (k === excludeCol) continue;
+        const sel = columnFilters[k];
+        if (sel.size === 0) continue;
+        const v = getColValue(r, k);
+        const key = v || "(vazio)";
+        if (!sel.has(key)) return false;
+      }
       return true;
     });
+  };
+
+  const filtered = useMemo(() => {
+    const base = applyFilters(null);
     return applySort(base, sort, (r, k) => (r as unknown as Record<string, unknown>)[k]);
-  }, [rows, search, filterStatus, sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, search, filterStatus, sort, columnFilters, contadorExibidoPorItem]);
+
+  const uniqueValues = (k: FilterableKey): string[] => {
+    const base = applyFilters(k);
+    const set = new Set<string>();
+    for (const r of base) set.add(getColValue(r, k));
+    return [...set];
+  };
+
+  const setColFilter = (k: FilterableKey, next: Set<string>) =>
+    setColumnFilters((prev) => ({ ...prev, [k]: next }));
 
   const totals = useMemo(() => {
     return filtered.reduce(
