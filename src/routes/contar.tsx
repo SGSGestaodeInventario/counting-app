@@ -358,6 +358,13 @@ function ContagemTela({ sessao, onSair }: { sessao: Sessao; onSair: () => void }
           ))}
         </div>
       )}
+
+      <AdicionarItemDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSubmit={criarItem}
+        contadorLabel={sessao.nome}
+      />
     </main>
   );
 }
