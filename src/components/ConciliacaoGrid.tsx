@@ -213,7 +213,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
 
       <div className="text-xs text-muted-foreground">
         Mostrando {filtered.length} de {rows.length} itens. <strong>Duplo-clique</strong> em qualquer coluna para ordenar.
-        Duplo-clique em "Total SAP" também expande os 4 estoques. Clique no ✏️ para editar contagens.
+        Duplo-clique em "Total SAP" expande os 4 estoques. Duplo-clique em "Contagem" para editar como <strong>{currentUser}</strong>.
       </div>
 
       <div className="border rounded-md overflow-auto max-h-[70vh] excel-grid">
