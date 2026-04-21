@@ -36,8 +36,8 @@ Colunas reconhecidas (acentos e espaços ignorados):
 ## Build e deploy no GitHub Pages
 
 ```bash
-# Substitua "nome-do-repo" pelo nome do seu repositório no GitHub
-VITE_BASE_PATH=/nome-do-repo/ bun run build
+# Repo no GitHub: CountingApp
+VITE_BASE_PATH=/CountingApp/ bun run build
 
 # Suba apenas a pasta dist/client/ para o branch gh-pages
 # (use git worktree, gh-pages npm package, ou GitHub Actions)
