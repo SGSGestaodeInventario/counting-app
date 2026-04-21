@@ -29,14 +29,8 @@ const str = (v: unknown): string | null => {
   return String(v).trim();
 };
 
-// Normaliza chave de coluna removendo acentos, espaços, pontuação
 const normKey = (k: string): string =>
-  k
-    .toString()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
+  k.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 const COLUMN_MAP: Record<string, keyof ImportRow> = {
   material: "material",
@@ -77,12 +71,7 @@ export async function parseExcel(file: File): Promise<ImportRow[]> {
       for (const [origKey, val] of Object.entries(row)) {
         const mapped = COLUMN_MAP[normKey(origKey)];
         if (!mapped) continue;
-        if (
-          mapped === "em_qualidade" ||
-          mapped === "transito_te" ||
-          mapped === "bloqueado" ||
-          mapped === "utilizacao_livre"
-        ) {
+        if (mapped === "em_qualidade" || mapped === "transito_te" || mapped === "bloqueado" || mapped === "utilizacao_livre") {
           out[mapped] = num(val);
         } else if (mapped === "material") {
           out.material = str(val) ?? "";
@@ -117,6 +106,8 @@ export interface ExportRow {
   Depósito: string;
   Lote: string;
   Posição: string;
+  "Estoque especial": string;
+  "Nº estoque especial": string;
   "Em contr.qualidade": number;
   "Trânsito e TE": number;
   Bloqueado: number;
@@ -124,6 +115,7 @@ export interface ExportRow {
   "Total SAP": number;
   "Quantidade contada": number;
   Diferença: number;
+  Contadores: string;
 }
 
 export function exportConciliacao(filename: string, rows: ExportRow[]) {

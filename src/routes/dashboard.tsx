@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Plus, Boxes, CheckCircle2, Clock, Target, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { fmtNum } from "@/lib/format";
 
 interface InvSummary {
   id: string;
@@ -19,6 +18,8 @@ interface InvSummary {
   acuracidade: number;
 }
 
+const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+
 export const Route = createFileRoute("/dashboard")({ component: DashboardPage });
 
 function DashboardPage() {
@@ -26,43 +27,37 @@ function DashboardPage() {
   const nav = useNavigate();
   const [invs, setInvs] = useState<InvSummary[]>([]);
   const [busy, setBusy] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
+  // tick a cada 60s para atualizar countdown
   useEffect(() => {
-    if (!loading && !user) nav({ to: "/login" });
-  }, [user, loading, nav]);
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => { if (!loading && !user) nav({ to: "/login" }); }, [user, loading, nav]);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       setBusy(true);
+      // 1. Purga inventários expirados (>7 dias) ANTES de listar
+      try { await supabase.rpc("purgar_inventarios_expirados"); } catch { /* silencioso */ }
+
       const { data: list, error } = await supabase
-        .from("inventarios")
-        .select("id, nome, status, created_at")
+        .from("inventarios").select("id, nome, status, created_at")
         .order("created_at", { ascending: false });
       if (error) {
         toast.error("Erro ao listar inventários", { description: error.message });
-        setBusy(false);
-        return;
+        setBusy(false); return;
       }
-
-      // Para cada inventário, contar itens e calcular acuracidade
       const summaries: InvSummary[] = [];
       for (const inv of list ?? []) {
-        const { data: itens } = await supabase
-          .from("itens")
-          .select("id, total_sap")
-          .eq("inventario_id", inv.id);
-        const { data: contagens } = await supabase
-          .from("contagens")
-          .select("item_id, quantidade")
-          .eq("inventario_id", inv.id);
-
+        const { data: itens } = await supabase.from("itens").select("id, total_sap").eq("inventario_id", inv.id);
+        const { data: contagens } = await supabase.from("contagens").select("item_id, quantidade").eq("inventario_id", inv.id);
         const total = itens?.length ?? 0;
-        // Soma contagens por item
         const somaPorItem = new Map<string, number>();
-        for (const c of contagens ?? []) {
-          somaPorItem.set(c.item_id, (somaPorItem.get(c.item_id) ?? 0) + Number(c.quantidade));
-        }
+        for (const c of contagens ?? []) somaPorItem.set(c.item_id, (somaPorItem.get(c.item_id) ?? 0) + Number(c.quantidade));
         const itensContados = somaPorItem.size;
         let okCount = 0;
         for (const it of itens ?? []) {
@@ -70,16 +65,7 @@ function DashboardPage() {
           if (soma !== null && Math.abs(soma - Number(it.total_sap)) < 0.0001) okCount++;
         }
         const acuracidade = total > 0 ? (okCount / total) * 100 : 0;
-
-        summaries.push({
-          id: inv.id,
-          nome: inv.nome,
-          status: inv.status,
-          created_at: inv.created_at,
-          total_itens: total,
-          itens_contados: itensContados,
-          acuracidade,
-        });
+        summaries.push({ id: inv.id, nome: inv.nome, status: inv.status, created_at: inv.created_at, total_itens: total, itens_contados: itensContados, acuracidade });
       }
       setInvs(summaries);
       setBusy(false);
@@ -98,10 +84,10 @@ function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Meus inventários</h1>
-          <p className="text-sm text-muted-foreground">Crie, monitore e concilie processos de inventário.</p>
+          <p className="text-sm text-muted-foreground">Crie, monitore e concilie processos de inventário. Inventários são apagados automaticamente após 7 dias da criação.</p>
         </div>
         <Button asChild>
           <Link to="/inventario/novo"><Plus className="h-4 w-4 mr-1" /> Novo inventário</Link>
@@ -140,12 +126,15 @@ function DashboardPage() {
                     <th className="py-2 pr-4 font-medium text-right">Itens</th>
                     <th className="py-2 pr-4 font-medium text-right">Contados</th>
                     <th className="py-2 pr-4 font-medium text-right">Acuracidade</th>
+                    <th className="py-2 pr-4 font-medium">Expira em</th>
                     <th className="py-2 pr-4 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {invs.map((inv) => {
                     const pct = inv.total_itens > 0 ? (inv.itens_contados / inv.total_itens) * 100 : 0;
+                    const expiraEm = new Date(inv.created_at).getTime() + TTL_MS;
+                    const restanteMs = expiraEm - now;
                     return (
                       <tr key={inv.id} className="border-b hover:bg-accent/50">
                         <td className="py-3 pr-4 font-medium">
@@ -168,6 +157,9 @@ function DashboardPage() {
                         <td className="py-3 pr-4 text-right tabular-nums">{inv.total_itens}</td>
                         <td className="py-3 pr-4 text-right tabular-nums">{inv.itens_contados} <span className="text-muted-foreground">({pct.toFixed(0)}%)</span></td>
                         <td className="py-3 pr-4 text-right tabular-nums">{inv.acuracidade.toFixed(1)}%</td>
+                        <td className="py-3 pr-4">
+                          <CountdownBadge restanteMs={restanteMs} />
+                        </td>
                         <td className="py-3 pr-4 text-right">
                           <Button asChild size="sm" variant="outline">
                             <Link to="/inventario/$id" params={{ id: inv.id }}>Abrir</Link>
@@ -183,6 +175,20 @@ function DashboardPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+function CountdownBadge({ restanteMs }: { restanteMs: number }) {
+  if (restanteMs <= 0) return <Badge variant="destructive">Expirado</Badge>;
+  const totalH = Math.floor(restanteMs / (60 * 60 * 1000));
+  const dias = Math.floor(totalH / 24);
+  const horas = totalH % 24;
+  const urgent = restanteMs < 24 * 60 * 60 * 1000;
+  const label = dias > 0 ? `${dias}d ${horas}h` : `${horas}h`;
+  return (
+    <Badge variant={urgent ? "destructive" : "outline"} className="tabular-nums">
+      <Clock className="h-3 w-3 mr-1" /> {label}
+    </Badge>
   );
 }
 

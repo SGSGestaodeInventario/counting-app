@@ -28,6 +28,8 @@ interface ItemDB {
   deposito: string | null;
   lote: string | null;
   posicao: string | null;
+  estoque_especial: string | null;
+  num_estoque_especial: string | null;
   em_qualidade: number;
   transito_te: number;
   bloqueado: number;
@@ -43,7 +45,7 @@ function InvDetalhe() {
   const nav = useNavigate();
   const [inv, setInv] = useState<Inventario | null>(null);
   const [itens, setItens] = useState<ItemDB[]>([]);
-  const [contagens, setContagens] = useState<{ item_id: string; nome_contador: string; quantidade: number }[]>([]);
+  const [contagens, setContagens] = useState<{ item_id: string; nome_contador: string; quantidade: number; updated_at: string }[]>([]);
   const [busy, setBusy] = useState(true);
   const [importing, setImporting] = useState(false);
   const [tab, setTab] = useState("conciliacao");
@@ -54,8 +56,8 @@ function InvDetalhe() {
     setBusy(true);
     const [{ data: invData, error: e1 }, { data: itensData, error: e2 }, { data: contData, error: e3 }] = await Promise.all([
       supabase.from("inventarios").select("id, nome, status, created_at").eq("id", id).maybeSingle(),
-      supabase.from("itens").select("id, material, descricao, centro, deposito, lote, posicao, em_qualidade, transito_te, bloqueado, utilizacao_livre, total_sap").eq("inventario_id", id).order("material"),
-      supabase.from("contagens").select("item_id, nome_contador, quantidade").eq("inventario_id", id),
+      supabase.from("itens").select("id, material, descricao, centro, deposito, lote, posicao, estoque_especial, num_estoque_especial, em_qualidade, transito_te, bloqueado, utilizacao_livre, total_sap").eq("inventario_id", id).order("material"),
+      supabase.from("contagens").select("item_id, nome_contador, quantidade, updated_at").eq("inventario_id", id),
     ]);
     if (e1 || !invData) { toast.error("Inventário não encontrado"); nav({ to: "/dashboard" }); return; }
     if (e2) toast.error("Erro ao carregar itens", { description: e2.message });
@@ -186,7 +188,7 @@ function InvDetalhe() {
               </CardContent>
             </Card>
           ) : (
-            <ConciliacaoGrid rows={rows} inventarioNome={inv.nome} />
+            <ConciliacaoGrid rows={rows} inventarioId={inv.id} inventarioNome={inv.nome} contagens={contagens} onChange={refresh} />
           )}
         </TabsContent>
         <TabsContent value="importar" className="mt-4">
