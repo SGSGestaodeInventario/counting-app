@@ -62,7 +62,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
   const [expandSAP, setExpandSAP] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"todos" | "ok" | "divergente" | "nao_contado">("todos");
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
-  const [editingItem, setEditingItem] = useState<ItemRow | null>(null);
+  
   const { user } = useAuth();
   const currentUser = emailPrefix(user?.email);
   const [inlineEdit, setInlineEdit] = useState<{ itemId: string; value: string } | null>(null);
