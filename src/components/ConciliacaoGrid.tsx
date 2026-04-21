@@ -72,7 +72,32 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
   const [contadoresItem, setContadoresItem] = useState<ItemRow | null>(null);
   const [deleteContagem, setDeleteContagem] = useState<{ itemId: string; nome: string } | null>(null);
   const [savingInline, setSavingInline] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddItem = async (payload: NovoItemPayload) => {
+    const { data: novo, error: ie } = await supabase.from("itens").insert({
+      inventario_id: inventarioId,
+      material: payload.material,
+      descricao: payload.descricao,
+      centro: payload.centro,
+      deposito: payload.deposito,
+      lote: payload.lote,
+      posicao: payload.posicao,
+      estoque_especial: payload.estoque_especial,
+      num_estoque_especial: payload.num_estoque_especial,
+      unid_medida: payload.unid_medida,
+      tipo_material: payload.tipo_material,
+      em_qualidade: 0, transito_te: 0, bloqueado: 0, utilizacao_livre: 0, total_sap: 0,
+    }).select("id").single();
+    if (ie || !novo) { toast.error("Erro ao adicionar item", { description: ie?.message }); return; }
+    const { error: ce } = await supabase.from("contagens").insert({
+      inventario_id: inventarioId, item_id: novo.id, nome_contador: currentUser, quantidade: payload.contagem,
+    });
+    if (ce) { toast.error("Item criado, mas falhou a contagem", { description: ce.message }); return; }
+    toast.success(`Item ${payload.material} adicionado (sobra de ${fmtNum(payload.contagem)})`);
+    await onChange();
+  };
 
   const handleDeleteContagem = async () => {
     if (!deleteContagem) return;
