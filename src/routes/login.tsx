@@ -1,5 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Boxes, KeyRound } from "lucide-react";
+import { toast } from "sonner";
+import heroImg from "@/assets/login-hero.png";
 
 function TypewriterText({ text, speed = 70 }: { text: string; speed?: number }) {
   const [shown, setShown] = useState("");
@@ -20,13 +27,6 @@ function TypewriterText({ text, speed = 70 }: { text: string; speed?: number }) 
     </span>
   );
 }
-import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Boxes, KeyRound } from "lucide-react";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
 
@@ -51,45 +51,95 @@ function LoginPage() {
   if (loading) return <div className="p-8 text-muted-foreground">Carregando…</div>;
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-4 py-12 bg-gradient-to-br from-background to-accent/30">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 mb-4">
-            <Boxes className="h-7 w-7" />
-          </div>
-          <h1 className="text-2xl font-bold"><TypewriterText text="App de contagens." /></h1>
-          <p className="text-sm text-muted-foreground mt-1">Gestão de inventários SAP</p>
+    <div className="min-h-screen grid md:grid-cols-2 bg-white text-black">
+      {/* Painel visual */}
+      <div className="relative bg-neutral-100 overflow-hidden h-40 md:h-auto">
+        <img
+          src={heroImg}
+          alt="Inventário corporativo"
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Painel formulário */}
+      <div className="flex flex-col justify-between px-6 py-10 md:px-16 md:py-14">
+        <div className="flex items-center gap-2 text-black">
+          <Boxes className="h-5 w-5" />
+          <span className="text-sm font-medium tracking-tight">SGS</span>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Entrar</CardTitle>
-            <CardDescription>Use suas credenciais cadastradas pelo administrador.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={submit} className="space-y-4">
+
+        <div className="flex-1 flex items-center justify-center py-10">
+          <div className="w-full max-w-sm">
+            <div className="mb-10">
+              <h1 className="text-3xl font-semibold tracking-tight text-black">
+                <TypewriterText text="App de contagens." />
+              </h1>
+              <p className="text-sm text-neutral-500 mt-2">
+                Gestão de inventários SAP
+              </p>
+            </div>
+
+            <form onSubmit={submit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                <Label htmlFor="email" className="text-xs font-medium text-neutral-700">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  className="h-11 border-neutral-200 bg-white rounded-md focus-visible:ring-1 focus-visible:ring-black focus-visible:ring-offset-0"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pwd">Senha</Label>
-                <Input id="pwd" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+                <Label htmlFor="pwd" className="text-xs font-medium text-neutral-700">Senha</Label>
+                <Input
+                  id="pwd"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="h-11 border-neutral-200 bg-white rounded-md focus-visible:ring-1 focus-visible:ring-black focus-visible:ring-offset-0"
+                />
               </div>
-              <Button type="submit" className="w-full" disabled={busy}>
+              <Button
+                type="submit"
+                disabled={busy}
+                className="h-11 w-full bg-black text-white hover:bg-neutral-800 rounded-md font-medium shadow-none"
+              >
                 {busy ? "Entrando…" : "Entrar"}
               </Button>
             </form>
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">ou</span>
+
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-neutral-200" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-3 text-[10px] uppercase tracking-[0.2em] text-neutral-400">
+                  ou
+                </span>
               </div>
             </div>
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/contar"><KeyRound className="h-4 w-4 mr-2" /> Sou contador (entrar com ID)</Link>
+
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 w-full border-neutral-300 text-black hover:bg-neutral-50 rounded-md shadow-none"
+            >
+              <Link to="/contar">
+                <KeyRound className="h-4 w-4 mr-2" />
+                Sou contador (entrar com ID)
+              </Link>
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        <p className="text-xs text-neutral-400 text-center md:text-left">
+          © SGS — Gestão de inventários
+        </p>
       </div>
     </div>
   );
