@@ -186,7 +186,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      purgar_inventarios_expirados: { Args: never; Returns: number }
     }
     Enums: {
       inventario_status: "em_andamento" | "concluido"
