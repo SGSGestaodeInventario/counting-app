@@ -287,20 +287,44 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
                     <td className="num">{fmtNum(r.utilizacao_livre)}</td>
                   </>}
                   <td className="num font-medium">{fmtNum(r.total_sap)}</td>
-                  <td className="num" title={cs.map((c) => `${c.nome_contador}: ${fmtNum(c.quantidade)}`).join("\n")}>
-                    {r.contado ? (
+                  <td
+                    className="num cursor-pointer"
+                    title={cs.length ? cs.map((c) => `${c.nome_contador}: ${fmtNum(c.quantidade)}`).join("\n") : "Duplo-clique para registrar contagem"}
+                    onDoubleClick={() => setInlineEdit({ itemId: r.id, value: r.contado ? fmtNum(r.contagem) : "" })}
+                  >
+                    {inlineEdit?.itemId === r.id ? (
+                      <Input
+                        ref={inlineInputRef}
+                        value={inlineEdit.value}
+                        onChange={(e) => setInlineEdit({ itemId: r.id, value: e.target.value })}
+                        onBlur={saveInlineEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); saveInlineEdit(); }
+                          if (e.key === "Escape") { e.preventDefault(); setInlineEdit(null); }
+                        }}
+                        disabled={savingInline}
+                        className="h-7 text-right tabular-nums"
+                      />
+                    ) : r.contado ? (
                       <span>
                         {fmtNum(r.contagem)}
-                        {cs.length > 0 && <span className="text-[10px] text-muted-foreground block">{cs.length} contador{cs.length > 1 ? "es" : ""}</span>}
+                        {cs.length > 1 && <span className="text-[10px] text-muted-foreground block">{cs.length} contadores</span>}
                       </span>
                     ) : "—"}
+                  </td>
+                  <td className="text-xs text-muted-foreground">
+                    {cs.length === 0 ? "—" : cs.length === 1 ? cs[0].nome_contador : (
+                      <span title={cs.map((c) => c.nome_contador).join(", ")}>
+                        {cs[cs.length - 1].nome_contador} <span className="text-[10px]">+{cs.length - 1}</span>
+                      </span>
+                    )}
                   </td>
                   <td className={`num font-medium ${!r.contado ? "text-muted-foreground" : Math.abs(r.diferenca) > 0.0001 ? "text-destructive" : "text-success"}`}>
                     {r.contado ? fmtNum(r.diferenca) : "—"}
                   </td>
                   <td>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingItem(r)} title="Editar contagens">
-                      <Pencil className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteTarget(r)} title="Excluir item">
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </td>
                 </tr>
