@@ -67,8 +67,22 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
   const currentUser = emailPrefix(user?.email);
   const [inlineEdit, setInlineEdit] = useState<{ itemId: string; value: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ItemRow | null>(null);
+  const [contadoresItem, setContadoresItem] = useState<ItemRow | null>(null);
+  const [deleteContagem, setDeleteContagem] = useState<{ itemId: string; nome: string } | null>(null);
   const [savingInline, setSavingInline] = useState(false);
   const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDeleteContagem = async () => {
+    if (!deleteContagem) return;
+    const { error } = await supabase.from("contagens").delete()
+      .eq("inventario_id", inventarioId)
+      .eq("item_id", deleteContagem.itemId)
+      .eq("nome_contador", deleteContagem.nome);
+    if (error) { toast.error("Erro ao excluir contagem", { description: error.message }); return; }
+    toast.success(`Contagem de ${deleteContagem.nome} excluída`);
+    setDeleteContagem(null);
+    await onChange();
+  };
 
   useEffect(() => {
     if (inlineEdit && inlineInputRef.current) {
