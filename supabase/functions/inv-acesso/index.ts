@@ -91,7 +91,6 @@ Deno.serve(async (req) => {
         transito_te: 0,
         bloqueado: 0,
         utilizacao_livre: 0,
-        total_sap: 0,
       };
       const { data: novoItem, error: ie } = await admin
         .from("itens")
