@@ -61,12 +61,21 @@ type SortKey =
   | "em_qualidade" | "transito_te" | "bloqueado" | "utilizacao_livre"
   | "total_sap" | "contagem" | "diferenca";
 
+type FilterableKey =
+  | "material" | "descricao" | "centro" | "deposito" | "lote" | "posicao"
+  | "estoque_especial" | "num_estoque_especial" | "contador";
+
 export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens, onChange }: Props) {
   const [search, setSearch] = useState("");
   const [expandSAP, setExpandSAP] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"todos" | "ok" | "divergente" | "nao_contado">("todos");
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
-  
+  const [columnFilters, setColumnFilters] = useState<Record<FilterableKey, Set<string>>>({
+    material: new Set(), descricao: new Set(), centro: new Set(), deposito: new Set(),
+    lote: new Set(), posicao: new Set(), estoque_especial: new Set(), num_estoque_especial: new Set(),
+    contador: new Set(),
+  });
+
   const { user } = useAuth();
   const currentUser = emailPrefix(user?.email);
   const [inlineEdit, setInlineEdit] = useState<{ itemId: string; value: string } | null>(null);
