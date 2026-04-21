@@ -1,14 +1,20 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { fmtNum, parseNum } from "@/lib/format";
 import { exportConciliacao, type ExportRow } from "@/lib/excel";
-import { Download, Search, Pencil, Trash2, Plus } from "lucide-react";
+import { Download, Search, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { applySort, nextSort, sortIndicator, type SortState } from "@/lib/sort";
+import { useAuth } from "@/lib/auth";
+
+function emailPrefix(email: string | null | undefined): string {
+  if (!email) return "usuário";
+  const at = email.indexOf("@");
+  return at > 0 ? email.slice(0, at) : email;
+}
 
 export interface Contagem {
   item_id: string;
@@ -56,7 +62,44 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
   const [expandSAP, setExpandSAP] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"todos" | "ok" | "divergente" | "nao_contado">("todos");
   const [sort, setSort] = useState<SortState<SortKey> | null>({ key: "material", dir: "asc" });
-  const [editingItem, setEditingItem] = useState<ItemRow | null>(null);
+  
+  const { user } = useAuth();
+  const currentUser = emailPrefix(user?.email);
+  const [inlineEdit, setInlineEdit] = useState<{ itemId: string; value: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ItemRow | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
+  const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inlineEdit && inlineInputRef.current) {
+      inlineInputRef.current.focus();
+      inlineInputRef.current.select();
+    }
+  }, [inlineEdit]);
+
+  const saveInlineEdit = async () => {
+    if (!inlineEdit) return;
+    const qtd = parseNum(inlineEdit.value);
+    setSavingInline(true);
+    const { error } = await supabase.from("contagens").upsert(
+      { inventario_id: inventarioId, item_id: inlineEdit.itemId, nome_contador: currentUser, quantidade: qtd },
+      { onConflict: "item_id,nome_contador" },
+    );
+    setSavingInline(false);
+    if (error) { toast.error("Erro ao salvar", { description: error.message }); return; }
+    toast.success(`Contagem registrada por ${currentUser}`);
+    setInlineEdit(null);
+    await onChange();
+  };
+
+  const handleDeleteItem = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("itens").delete().eq("id", deleteTarget.id);
+    if (error) { toast.error("Erro ao excluir", { description: error.message }); return; }
+    toast.success("Item excluído");
+    setDeleteTarget(null);
+    await onChange();
+  };
 
   const contagensPorItem = useMemo(() => {
     const m = new Map<string, Contagem[]>();
@@ -168,7 +211,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
 
       <div className="text-xs text-muted-foreground">
         Mostrando {filtered.length} de {rows.length} itens. <strong>Duplo-clique</strong> em qualquer coluna para ordenar.
-        Duplo-clique em "Total SAP" também expande os 4 estoques. Clique no ✏️ para editar contagens.
+        Duplo-clique em "Total SAP" expande os 4 estoques. Duplo-clique em "Contagem" para editar como <strong>{currentUser}</strong>.
       </div>
 
       <div className="border rounded-md overflow-auto max-h-[70vh] excel-grid">
@@ -187,6 +230,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
               </>}
               <td className="num">{fmtNum(totals.sap)}</td>
               <td className="num">{fmtNum(totals.contagem)}</td>
+              <td></td>
               <td className={`num ${Math.abs(totals.dif) > 0.0001 ? "text-destructive" : "text-success"}`}>{fmtNum(totals.dif)}</td>
               <td></td>
             </tr>
@@ -214,6 +258,7 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
                 Total SAP {expandSAP ? "▾" : "▸"}{sortIndicator(sort, "total_sap")}
               </th>
               <Th k="contagem" num>Contagem</Th>
+              <th>Contador</th>
               <Th k="diferenca" num>Diferença</Th>
               <th>Ações</th>
             </tr>
@@ -240,163 +285,73 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
                     <td className="num">{fmtNum(r.utilizacao_livre)}</td>
                   </>}
                   <td className="num font-medium">{fmtNum(r.total_sap)}</td>
-                  <td className="num" title={cs.map((c) => `${c.nome_contador}: ${fmtNum(c.quantidade)}`).join("\n")}>
-                    {r.contado ? (
+                  <td
+                    className="num cursor-pointer"
+                    title={cs.length ? cs.map((c) => `${c.nome_contador}: ${fmtNum(c.quantidade)}`).join("\n") : "Duplo-clique para registrar contagem"}
+                    onDoubleClick={() => setInlineEdit({ itemId: r.id, value: r.contado ? fmtNum(r.contagem) : "" })}
+                  >
+                    {inlineEdit?.itemId === r.id ? (
+                      <Input
+                        ref={inlineInputRef}
+                        value={inlineEdit.value}
+                        onChange={(e) => setInlineEdit({ itemId: r.id, value: e.target.value })}
+                        onBlur={saveInlineEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); saveInlineEdit(); }
+                          if (e.key === "Escape") { e.preventDefault(); setInlineEdit(null); }
+                        }}
+                        disabled={savingInline}
+                        className="h-7 text-right tabular-nums"
+                      />
+                    ) : r.contado ? (
                       <span>
                         {fmtNum(r.contagem)}
-                        {cs.length > 0 && <span className="text-[10px] text-muted-foreground block">{cs.length} contador{cs.length > 1 ? "es" : ""}</span>}
+                        {cs.length > 1 && <span className="text-[10px] text-muted-foreground block">{cs.length} contadores</span>}
                       </span>
                     ) : "—"}
+                  </td>
+                  <td className="text-xs text-muted-foreground">
+                    {cs.length === 0 ? "—" : cs.length === 1 ? cs[0].nome_contador : (
+                      <span title={cs.map((c) => c.nome_contador).join(", ")}>
+                        {cs[cs.length - 1].nome_contador} <span className="text-[10px]">+{cs.length - 1}</span>
+                      </span>
+                    )}
                   </td>
                   <td className={`num font-medium ${!r.contado ? "text-muted-foreground" : Math.abs(r.diferenca) > 0.0001 ? "text-destructive" : "text-success"}`}>
                     {r.contado ? fmtNum(r.diferenca) : "—"}
                   </td>
                   <td>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingItem(r)} title="Editar contagens">
-                      <Pencil className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteTarget(r)} title="Excluir item">
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={11 + colunasNumExpandida} className="text-center py-12 text-muted-foreground">Nenhum item encontrado.</td></tr>
+              <tr><td colSpan={12 + colunasNumExpandida} className="text-center py-12 text-muted-foreground">Nenhum item encontrado.</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      <EditarContagensDialog
-        item={editingItem}
-        contagens={editingItem ? contagensPorItem.get(editingItem.id) ?? [] : []}
-        inventarioId={inventarioId}
-        onClose={() => setEditingItem(null)}
-        onSaved={async () => { await onChange(); }}
-      />
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o item <strong className="font-mono">{deleteTarget?.material}</strong>
+              {deleteTarget?.descricao ? ` — ${deleteTarget.descricao}` : ""}? Todas as contagens associadas também serão removidas. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteItem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  );
-}
-
-function EditarContagensDialog({
-  item, contagens, inventarioId, onClose, onSaved,
-}: {
-  item: ItemRow | null;
-  contagens: Contagem[];
-  inventarioId: string;
-  onClose: () => void;
-  onSaved: () => Promise<void>;
-}) {
-  const [novoNome, setNovoNome] = useState("");
-  const [novoQtd, setNovoQtd] = useState("");
-  const [editVals, setEditVals] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
-
-  const open = !!item;
-
-  const handleAdd = async () => {
-    if (!item) return;
-    const nome = novoNome.trim();
-    if (!nome) { toast.error("Informe o nome do contador"); return; }
-    const qtd = parseNum(novoQtd);
-    setBusy(true);
-    const { error } = await supabase.from("contagens").upsert(
-      { inventario_id: inventarioId, item_id: item.id, nome_contador: nome, quantidade: qtd },
-      { onConflict: "item_id,nome_contador" },
-    );
-    setBusy(false);
-    if (error) { toast.error("Erro ao salvar", { description: error.message }); return; }
-    toast.success("Contagem adicionada");
-    setNovoNome(""); setNovoQtd("");
-    await onSaved();
-  };
-
-  const handleUpdate = async (c: Contagem) => {
-    if (!item) return;
-    const val = editVals[c.nome_contador];
-    if (val === undefined) return;
-    const qtd = parseNum(val);
-    setBusy(true);
-    const { error } = await supabase.from("contagens").upsert(
-      { inventario_id: inventarioId, item_id: item.id, nome_contador: c.nome_contador, quantidade: qtd },
-      { onConflict: "item_id,nome_contador" },
-    );
-    setBusy(false);
-    if (error) { toast.error("Erro ao atualizar", { description: error.message }); return; }
-    toast.success(`Contagem de ${c.nome_contador} atualizada`);
-    setEditVals((p) => { const x = { ...p }; delete x[c.nome_contador]; return x; });
-    await onSaved();
-  };
-
-  const handleDelete = async (c: Contagem) => {
-    if (!item) return;
-    if (!confirm(`Excluir contagem de ${c.nome_contador}?`)) return;
-    setBusy(true);
-    const { error } = await supabase.from("contagens").delete()
-      .eq("inventario_id", inventarioId).eq("item_id", item.id).eq("nome_contador", c.nome_contador);
-    setBusy(false);
-    if (error) { toast.error("Erro ao excluir", { description: error.message }); return; }
-    toast.success("Contagem excluída");
-    await onSaved();
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-mono text-base">{item?.material}</DialogTitle>
-          <DialogDescription>
-            {item?.descricao ?? ""} · Total SAP: <strong>{item ? fmtNum(item.total_sap) : ""}</strong>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-sm font-semibold mb-2">Contagens registradas</h4>
-            {contagens.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma contagem ainda.</p>
-            ) : (
-              <ul className="space-y-2">
-                {contagens.map((c) => (
-                  <li key={c.nome_contador} className="flex items-center gap-2 text-sm border rounded-md p-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{c.nome_contador}</div>
-                      <div className="text-[10px] text-muted-foreground">{new Date(c.updated_at).toLocaleString("pt-BR")}</div>
-                    </div>
-                    <Input
-                      className="h-8 w-24 text-right tabular-nums"
-                      value={editVals[c.nome_contador] ?? fmtNum(c.quantidade)}
-                      onChange={(e) => setEditVals((p) => ({ ...p, [c.nome_contador]: e.target.value }))}
-                    />
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => handleUpdate(c)}>Salvar</Button>
-                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => handleDelete(c)} title="Excluir">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="border-t pt-3">
-            <h4 className="text-sm font-semibold mb-2">Adicionar contagem manual</h4>
-            <div className="grid grid-cols-[1fr_100px_auto] gap-2 items-end">
-              <div>
-                <Label className="text-xs">Nome do contador</Label>
-                <Input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Ex.: João" className="h-9" />
-              </div>
-              <div>
-                <Label className="text-xs">Quantidade</Label>
-                <Input value={novoQtd} onChange={(e) => setNovoQtd(e.target.value)} placeholder="0,000" className="h-9 text-right" />
-              </div>
-              <Button size="sm" disabled={busy} onClick={handleAdd}><Plus className="h-4 w-4" /></Button>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Fechar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
