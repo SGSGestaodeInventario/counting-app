@@ -1,22 +1,24 @@
 
 
-## Animação de digitação no título da Login
+## Redesign completo da Login — Black & White Corporativo
 
-Adicionar efeito typewriter no título "App de contagens." da página de login, simulando digitação profissional ao abrir a tela.
+Implementar agora o split-screen minimalista preto/branco já planejado anteriormente, mantendo o efeito typewriter já adicionado e toda a lógica existente (login email/senha + atalho contador).
 
 ### Mudanças
 
-**`src/routes/login.tsx`**
-- Criar componente local `TypewriterText` que recebe `text: string` e renderiza caractere por caractere via `useState` + `useEffect` com `setInterval`.
-- Velocidade: ~70ms por caractere (ajuste natural, nem rápido nem lento).
-- Cursor piscante (`|`) ao lado do texto enquanto digita; após completar, cursor permanece piscando por ~2s e depois some (ou fica fixo, conforme padrão de sites tipo Vercel/Linear).
-- Usar `aria-label={text}` no wrapper para leitores de tela lerem o texto completo, e `aria-hidden` no span animado.
-- Substituir o `<h1>` atual que renderiza "App de contagens." pelo componente.
-- Reservar altura mínima (`min-h-[1em]`) para evitar layout shift durante a digitação.
+**1. Asset**
+- Copiar `user-uploads://Captura_de_Tela_2026-04-21_às_11.38.10.png` → `src/assets/login-hero.png`.
 
-### Detalhes técnicos
-- Cursor implementado com `<span>` + classe Tailwind `animate-pulse` (já disponível via tw-animate-css), ou keyframe inline com `@keyframes blink` se precisar de piscar mais nítido — preferir `animate-pulse` para evitar tocar no CSS global.
-- Cleanup do `setInterval` no `useEffect` return.
-- Animação dispara apenas no mount (client-side); no SSR renderiza string vazia + cursor, hidrata e começa a digitar — sem hydration mismatch porque o estado inicial é o mesmo nos dois lados.
-- Sem novas dependências.
+**2. `src/routes/login.tsx`** — reescrita do JSX (mantendo `TypewriterText`, `useAuth`, `signIn`, redirect, toasts)
+- Layout `grid md:grid-cols-2 min-h-screen`, sem o gradiente azul atual.
+- **Painel esquerdo** (desktop): `<img>` `object-cover` ocupando 100% do painel. No mobile vira faixa superior `h-40`.
+- **Painel direito**: fundo `bg-white`, formulário centralizado `max-w-sm w-full px-6`.
+  - Header: logo monocromático (ícone `Boxes` em preto pequeno) + título com typewriter em `text-3xl font-semibold tracking-tight text-black` + subtítulo `text-sm text-neutral-500`.
+  - Form sem Card — apenas inputs soltos com labels acima.
+  - Inputs: `h-11 border-neutral-200 focus-visible:ring-black focus-visible:ring-1 rounded-md bg-white`.
+  - Botão "Entrar": `h-11 w-full bg-black text-white hover:bg-neutral-800 rounded-md font-medium`.
+  - Divisor "ou": linhas finas `border-neutral-200`, texto `text-[10px] uppercase tracking-[0.2em] text-neutral-400`.
+  - Botão "Sou contador": `variant="outline"` com classes `h-11 border-neutral-300 text-black hover:bg-neutral-50`.
+  - Rodapé do painel: `text-xs text-neutral-400` "© SGS — Gestão de inventários".
+- Remover `Card`, `CardHeader`, `CardContent`, `CardTitle`, `CardDescription` do import.
 
