@@ -263,15 +263,28 @@ export function ConciliacaoGrid({ rows, inventarioId, inventarioNome, contagens,
     exportConciliacao(`${inventarioNome.replace(/[^\w]+/g, "_")}_conciliacao.xlsx`, data);
   }, [filtered, inventarioNome, contagensPorItem]);
 
-  const Th = ({ k, children, num }: { k: SortKey; children: React.ReactNode; num?: boolean }) => (
-    <th
-      className={`sortable ${num ? "num" : ""}`}
-      onDoubleClick={() => setSort((s) => nextSort(s, k))}
-      title="Duplo-clique para ordenar"
-    >
-      {children}{sortIndicator(sort, k)}
-    </th>
-  );
+  const Th = ({ k, children, num, filterKey }: { k: SortKey; children: React.ReactNode; num?: boolean; filterKey?: FilterableKey }) => {
+    const active = filterKey ? columnFilters[filterKey].size > 0 : false;
+    return (
+      <th
+        className={`sortable ${num ? "num" : ""} ${active ? "bg-accent" : ""}`}
+        onDoubleClick={() => setSort((s) => nextSort(s, k))}
+        title="Duplo-clique para ordenar"
+      >
+        <span className="inline-flex items-center">
+          <span>{children}{sortIndicator(sort, k)}</span>
+          {filterKey && (
+            <ColumnFilter
+              label={String(children)}
+              values={uniqueValues(filterKey)}
+              selected={columnFilters[filterKey]}
+              onChange={(next) => setColFilter(filterKey, next)}
+            />
+          )}
+        </span>
+      </th>
+    );
+  };
 
   // colunas visíveis (para colspan da linha de totais)
   const colunasTexto = 8 + (expandSAP ? 0 : 0); // material..num_est_esp = 8
