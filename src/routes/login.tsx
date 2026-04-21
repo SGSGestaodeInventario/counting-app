@@ -1,5 +1,25 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+
+function TypewriterText({ text, speed = 70 }: { text: string; speed?: number }) {
+  const [shown, setShown] = useState("");
+  useEffect(() => {
+    setShown("");
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setShown(text.slice(0, i));
+      if (i >= text.length) clearInterval(id);
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, speed]);
+  return (
+    <span aria-label={text} className="inline-block min-h-[1em]">
+      <span aria-hidden="true">{shown}</span>
+      <span aria-hidden="true" className="inline-block w-[2px] h-[0.9em] align-[-0.1em] ml-0.5 bg-current animate-pulse" />
+    </span>
+  );
+}
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +57,7 @@ function LoginPage() {
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 mb-4">
             <Boxes className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">InvControl</h1>
+          <h1 className="text-2xl font-bold"><TypewriterText text="App de contagens." /></h1>
           <p className="text-sm text-muted-foreground mt-1">Gestão de inventários SAP</p>
         </div>
         <Card>
